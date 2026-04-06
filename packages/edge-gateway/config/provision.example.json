@@ -1,0 +1,24 @@
+{
+    "device_id": "d1e2f3a4-0000-0000-0000-000000000001",
+    "tenant_id": "a1b2c3d4-0000-0000-0000-000000000001",
+    "mqtt": {
+        "broker_url": "wc68f227.ala.us-east-1.emqxsl.com",
+        "port": 8883,
+        "client_id": "xrf-dev-001",
+        "username": "xrf-dev-001",
+        "password_file": "/etc/sax/secrets/mqtt.password",
+        "use_tls": true
+    },
+    "hmac_secret_path": "/etc/sax/secrets/hmac.key",
+    "local_db": {
+        "host": "localhost",
+        "port": 5432,
+        "dbname": "xrfonstream",
+        "user": "sax",
+        "password_file": "/etc/sax/secrets/db.password"
+    },
+    "telemetry_interval_s": 2,
+    "spectra_check_interval_s": 10,
+    "sentinel_check_interval_s": 5,
+    "concentrations_check_interval_s": 10
+}
