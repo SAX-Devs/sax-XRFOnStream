@@ -2,9 +2,18 @@
 
 import argparse
 import logging
+import signal
+import threading
 import sys
 
 from src.config import GatewayConfig
+from src.offline_buffer import OfflineBuffer
+from src.mqtt_client import MqttClient
+from src.db_reader import DbReader
+from src.telemetry_publisher import TelemetryPublisher
+from src.sentinel_publisher import SentinelPublisher
+from src.equipment_state_publisher import EquipmentStatePublisher
+from src.concentrations_publisher import ConcentrationsPublisher
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,8 +48,60 @@ def main() -> None:
     logger.info(f"Device ID: {config.device_id}")
     logger.info(f"Tenant ID: {config.tenant_id}")
     logger.info(f"MQTT Broker: {config.mqtt.broker_url}:{config.mqtt.port}")
-    logger.info(f"Telemetry interval: {config.telemetry_interval_s}s")
-    logger.info("Edge Gateway configured successfully. Components not yet initialized.")
+
+    stop_event = threading.Event()
+
+    # 1. Initialize offline buffer
+    offline_buffer = OfflineBuffer(config.local_db)
+
+    # 2. Initialize MQTT client
+    lwt_topic = f"sax/{config.tenant_id}/{config.device_id}/equipment_state"
+    mqtt_client = MqttClient(config.mqtt, offline_buffer, lwt_topic=lwt_topic)
+    mqtt_client.connect()
+
+    # 3. Initialize DB readers (one per publisher for thread safety)
+    telemetry_db = DbReader(config.local_db)
+    sentinel_db = DbReader(config.local_db)
+    concentrations_db = DbReader(config.local_db)
+
+    # 4. Initialize publishers
+    equipment_pub = EquipmentStatePublisher(config, mqtt_client, telemetry_db)
+    telemetry_pub = TelemetryPublisher(config, mqtt_client, telemetry_db, equipment_pub)
+    sentinel_pub = SentinelPublisher(config, mqtt_client, sentinel_db)
+    concentrations_pub = ConcentrationsPublisher(config, mqtt_client, concentrations_db)
+
+    # 5. Start publisher threads
+    threads = [
+        threading.Thread(target=telemetry_pub.start, args=(stop_event,), daemon=True, name="telemetry"),
+        threading.Thread(target=sentinel_pub.start, args=(stop_event,), daemon=True, name="sentinel"),
+        threading.Thread(target=concentrations_pub.start, args=(stop_event,), daemon=True, name="concentrations"),
+    ]
+
+    for t in threads:
+        t.start()
+
+    logger.info("All components initialized and running")
+
+    # 6. Handle graceful shutdown
+    def shutdown(signum, frame):
+        logger.info("Shutdown signal received")
+        stop_event.set()
+
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+
+    try:
+        stop_event.wait()
+    except KeyboardInterrupt:
+        stop_event.set()
+
+    # 7. Cleanup
+    logger.info("Shutting down...")
+    mqtt_client.disconnect()
+    for db in [telemetry_db, sentinel_db, concentrations_db]:
+        db.close()
+    offline_buffer.close()
+    logger.info("Edge Gateway stopped")
 
 
 if __name__ == "__main__":
