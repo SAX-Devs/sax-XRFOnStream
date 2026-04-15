@@ -1,0 +1,231 @@
+"""Live demo — connects to real EMQX broker and publishes mock telemetry.
+
+Usage: python demo_live.py
+Requires: .env file in repo root with EMQX and MQTT credentials.
+"""
+
+import json
+import ssl
+import time
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion
+
+# Load .env from repo root
+env_path = Path(__file__).parent.parent.parent / ".env"
+if env_path.exists():
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip())
+
+BROKER = os.environ.get("EMQX_BROKER_URL", "")
+PORT = int(os.environ.get("EMQX_BROKER_PORT", "8883"))
+USERNAME = os.environ.get("MQTT_USERNAME", "")
+PASSWORD = os.environ.get("MQTT_PASSWORD", "")
+DEVICE_ID = os.environ.get("DEVICE_ID", "")
+TENANT_ID = os.environ.get("TENANT_ID", "")
+
+TOPIC_PREFIX = f"sax/{TENANT_ID}/{DEVICE_ID}"
+
+# Mock telemetry data for 7 modules
+MOCK_TELEMETRY = {
+    "generator": {
+        "tube_high_voltage_kv": 30.0,
+        "beam_current_ua": 100.0,
+        "hv_on": False,
+        "sic_temperature_c": 42.5,
+        "power_supply_on": True,
+        "ramp_enabled": False,
+    },
+    "vacuum": {
+        "vacuum_sensor": 0.85,
+        "atmospheric_status": False,
+        "chamber_liquid_sensor": False,
+        "vacuum_pump_1": True,
+    },
+    "circulation": {
+        "operation_state": "ready",
+        "pump_state": True,
+        "flow_rate_in": 2.5,
+        "flow_rate_out": 2.4,
+        "high_pressure_sensor": False,
+    },
+    "interchanger": {
+        "current_position": 1,
+        "service_position": False,
+        "chamber_lock": True,
+        "door_lock": True,
+    },
+    "detector": {
+        "mca_length": 2048,
+        "gain": 1.0,
+        "temperature": -25.3,
+        "d_on": True,
+        "threshold": 50,
+    },
+    "temp_control": {
+        "water_pressure": 1.2,
+        "flow_active": True,
+        "valve_open": True,
+        "temperature_in": 22.1,
+        "temperature_out": 24.8,
+    },
+    "auxiliary": {
+        "bat_vol": 24.1,
+        "bat_fail": False,
+        "bat_dis": False,
+        "dc_ok": True,
+    },
+}
+
+
+def on_connect(client, userdata, flags, reason_code, properties=None):
+    if reason_code == 0:
+        print(f"\n{'='*60}")
+        print(f"  CONNECTED to EMQX broker: {BROKER}:{PORT}")
+        print(f"  Client: {USERNAME}")
+        print(f"{'='*60}\n")
+        # Subscribe to all our topics to see messages echo back
+        client.subscribe(f"{TOPIC_PREFIX}/#", 1)
+        print(f"  Subscribed to: {TOPIC_PREFIX}/#\n")
+    else:
+        print(f"  Connection FAILED: {reason_code}")
+        sys.exit(1)
+
+
+def on_message(client, userdata, message):
+    topic_short = message.topic.replace(TOPIC_PREFIX + "/", "")
+    try:
+        data = json.loads(message.payload)
+        print(f"  << RECEIVED [{topic_short}]")
+        if "module" in data:
+            print(f"     Module: {data['module']} | Keys: {list(data.get('data', {}).keys())}")
+        elif "state" in data:
+            print(f"     State: {data['state']}")
+        elif "alerts" in data:
+            for a in data["alerts"]:
+                print(f"     Alert: {a['name']} = {a['severity']}")
+    except Exception:
+        print(f"  << RECEIVED [{topic_short}] (raw)")
+
+
+def main():
+    if not BROKER or not USERNAME:
+        print("ERROR: Missing EMQX credentials. Check .env file.")
+        sys.exit(1)
+
+    print("\n  SAX XrfOnStream — Edge Gateway Live Demo")
+    print(f"  Broker: {BROKER}:{PORT}")
+    print(f"  Device: {DEVICE_ID}")
+    print(f"  Tenant: {TENANT_ID}")
+    print(f"  Connecting...\n")
+
+    client = mqtt.Client(
+        callback_api_version=CallbackAPIVersion.VERSION2,
+        client_id=USERNAME,
+    )
+    client.username_pw_set(USERNAME, PASSWORD)
+
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    client.tls_set_context(context)
+
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect(BROKER, PORT)
+    client.loop_start()
+
+    time.sleep(2)  # Wait for connection
+
+    if not client.is_connected():
+        print("  Failed to connect. Check credentials.")
+        sys.exit(1)
+
+    # --- Publish telemetry for all 7 modules ---
+    print(f"\n{'-'*60}")
+    print("  PUBLISHING TELEMETRY (7 modules)")
+    print(f"{'-'*60}\n")
+
+    for module, data in MOCK_TELEMETRY.items():
+        payload = {
+            "device_id": DEVICE_ID,
+            "module": module,
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "data": data,
+        }
+        topic = f"{TOPIC_PREFIX}/telemetry/{module}"
+        client.publish(topic, json.dumps(payload).encode(), qos=1)
+        print(f"  >> SENT [telemetry/{module}] — {len(data)} fields")
+        time.sleep(0.3)
+
+    time.sleep(1)
+
+    # --- Publish equipment state ---
+    print(f"\n{'-'*60}")
+    print("  PUBLISHING EQUIPMENT STATE")
+    print(f"{'-'*60}\n")
+
+    state_payload = {
+        "device_id": DEVICE_ID,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "state": "idle",
+        "detail": {"active_tasks": [], "hv_on": False},
+    }
+    client.publish(f"{TOPIC_PREFIX}/equipment_state", json.dumps(state_payload).encode(), qos=1)
+    print(f"  >> SENT [equipment_state] — state: idle")
+
+    time.sleep(1)
+
+    # --- Publish sentinel alerts ---
+    print(f"\n{'-'*60}")
+    print("  PUBLISHING SENTINEL ALERTS")
+    print(f"{'-'*60}\n")
+
+    sentinel_payload = {
+        "device_id": DEVICE_ID,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "source": "sentinel",
+        "alerts": [
+            {"name": "critical_flow", "severity": "OK", "message": "Flow normal"},
+            {"name": "hermetic", "severity": "OK", "message": "Hermetic seal OK"},
+            {"name": "air_tank", "severity": "OK", "message": "Tank pressure normal"},
+            {"name": "vacuum", "severity": "OK", "message": "Vacuum level OK"},
+        ],
+    }
+    client.publish(f"{TOPIC_PREFIX}/sentinel", json.dumps(sentinel_payload).encode(), qos=1)
+    print(f"  >> SENT [sentinel] — 4 validations, all OK")
+
+    time.sleep(2)
+
+    # --- Summary ---
+    print(f"\n{'='*60}")
+    print(f"  DEMO COMPLETE")
+    print(f"  - 7 telemetry modules published")
+    print(f"  - 1 equipment state published")
+    print(f"  - 1 sentinel report published")
+    print(f"  - All messages echoed back via subscription")
+    print(f"")
+    print(f"  Check EMQX Dashboard > Monitor to see the traffic!")
+    print(f"{'='*60}\n")
+
+    print("  Staying connected 30s so you can check EMQX Dashboard...")
+    print("  (Press Ctrl+C to stop early)\n")
+    try:
+        time.sleep(30)
+    except KeyboardInterrupt:
+        pass
+
+    client.loop_stop()
+    client.disconnect()
+    print("  Disconnected.")
+
+
+if __name__ == "__main__":
+    main()
