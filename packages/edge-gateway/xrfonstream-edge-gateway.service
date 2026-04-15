@@ -1,0 +1,20 @@
+[Unit]
+Description=SAX XrfOnStream Edge Gateway
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=sax
+Group=sax
+WorkingDirectory=/opt/sax/edge-gateway
+ExecStart=/opt/sax/edge-gateway/.venv/bin/python -m src.main --config /etc/sax/provision.json
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sax-edge-gateway
+
+[Install]
+WantedBy=multi-user.target

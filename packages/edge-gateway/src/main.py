@@ -14,6 +14,10 @@ from src.telemetry_publisher import TelemetryPublisher
 from src.sentinel_publisher import SentinelPublisher
 from src.equipment_state_publisher import EquipmentStatePublisher
 from src.concentrations_publisher import ConcentrationsPublisher
+from src.command_validator import CommandValidator
+from src.command_receiver import CommandReceiver
+from src.result_reporter import ResultReporter
+from src.spectra_uploader import SpectraUploader
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,10 +63,13 @@ def main() -> None:
     mqtt_client = MqttClient(config.mqtt, offline_buffer, lwt_topic=lwt_topic)
     mqtt_client.connect()
 
-    # 3. Initialize DB readers (one per publisher for thread safety)
+    # 3. Initialize DB readers (one per publisher thread for thread safety)
     telemetry_db = DbReader(config.local_db)
     sentinel_db = DbReader(config.local_db)
     concentrations_db = DbReader(config.local_db)
+    command_db = DbReader(config.local_db)
+    result_db = DbReader(config.local_db)
+    spectra_db = DbReader(config.local_db)
 
     # 4. Initialize publishers
     equipment_pub = EquipmentStatePublisher(config, mqtt_client, telemetry_db)
@@ -70,11 +77,22 @@ def main() -> None:
     sentinel_pub = SentinelPublisher(config, mqtt_client, sentinel_db)
     concentrations_pub = ConcentrationsPublisher(config, mqtt_client, concentrations_db)
 
-    # 5. Start publisher threads
+    # 5. Initialize command pipeline
+    validator = CommandValidator(config, command_db)
+    command_receiver = CommandReceiver(config, mqtt_client, command_db, validator)
+    command_receiver.start()
+
+    # 6. Initialize result reporter and spectra uploader
+    result_reporter = ResultReporter(config, mqtt_client, result_db)
+    spectra_uploader = SpectraUploader(config, mqtt_client, spectra_db)
+
+    # 7. Start publisher threads
     threads = [
         threading.Thread(target=telemetry_pub.start, args=(stop_event,), daemon=True, name="telemetry"),
         threading.Thread(target=sentinel_pub.start, args=(stop_event,), daemon=True, name="sentinel"),
         threading.Thread(target=concentrations_pub.start, args=(stop_event,), daemon=True, name="concentrations"),
+        threading.Thread(target=result_reporter.start, args=(stop_event,), daemon=True, name="result-reporter"),
+        threading.Thread(target=spectra_uploader.start, args=(stop_event,), daemon=True, name="spectra-uploader"),
     ]
 
     for t in threads:
@@ -82,7 +100,7 @@ def main() -> None:
 
     logger.info("All components initialized and running")
 
-    # 6. Handle graceful shutdown
+    # 8. Handle graceful shutdown
     def shutdown(signum, frame):
         logger.info("Shutdown signal received")
         stop_event.set()
@@ -95,10 +113,10 @@ def main() -> None:
     except KeyboardInterrupt:
         stop_event.set()
 
-    # 7. Cleanup
+    # 9. Cleanup
     logger.info("Shutting down...")
     mqtt_client.disconnect()
-    for db in [telemetry_db, sentinel_db, concentrations_db]:
+    for db in [telemetry_db, sentinel_db, concentrations_db, command_db, result_db, spectra_db]:
         db.close()
     offline_buffer.close()
     logger.info("Edge Gateway stopped")
