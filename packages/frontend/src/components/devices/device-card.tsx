@@ -16,11 +16,11 @@ export function DeviceCard({ device }: DeviceCardProps) {
   return (
     <Link
       href={ROUTES.DEVICE_STATUS(device.id)}
-      className="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-gray-300 hover:shadow-md"
+      className="group block rounded-xl border border-white/8 bg-white/[0.03] p-5 transition-all hover:border-white/15 hover:bg-white/[0.06]"
     >
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-gray-900 group-hover:text-blue-600">
+          <h3 className="truncate text-base font-semibold text-gray-100 group-hover:text-white">
             {device.label ?? device.serial}
           </h3>
           <p className="mt-0.5 text-sm text-gray-500">
@@ -35,7 +35,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
         <DeviceStatusBadge state={equipmentState} />
 
         {device.last_seen_at && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-600">
             {online
               ? "Conectado"
               : `Visto ${formatTimeAgo(device.last_seen_at)}`}
@@ -51,10 +51,12 @@ function OnlineIndicator({ online }: { online: boolean }) {
     <div className="flex items-center gap-1.5">
       <div
         className={`h-2.5 w-2.5 rounded-full ${
-          online ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" : "bg-gray-300"
+          online
+            ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+            : "bg-gray-600"
         }`}
       />
-      <span className="text-xs text-gray-500">
+      <span className={`text-xs ${online ? "text-emerald-400" : "text-gray-600"}`}>
         {online ? "Online" : "Offline"}
       </span>
     </div>

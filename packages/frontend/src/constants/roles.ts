@@ -16,6 +16,15 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
   sax_admin: 4,
 };
 
+export const ADMIN_ROLES: UserRole[] = ["sax_admin", "tenant_admin"];
+
+export const INVITE_ROLES: UserRole[] = [
+  "viewer",
+  "operator",
+  "service",
+  "tenant_admin",
+];
+
 export function hasMinimumRole(
   userRole: UserRole,
   requiredRole: UserRole
