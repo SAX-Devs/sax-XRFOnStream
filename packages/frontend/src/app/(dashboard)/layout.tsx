@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ROUTES } from "@/constants/routes";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
+import { TopNav } from "@/components/layout/top-nav";
 import type { UserRole } from "@/types/auth";
 
 export default async function DashboardLayout({
@@ -23,16 +22,12 @@ export default async function DashboardLayout({
   const role = (user.app_metadata?.role as UserRole) ?? "viewer";
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar userRole={role} />
+    <div className="flex min-h-screen flex-col bg-[#0a0a12]">
+      <TopNav email={email} userRole={role} />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header email={email} role={role} />
-
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 px-6 py-6">
+        <div className="mx-auto max-w-7xl">{children}</div>
+      </main>
     </div>
   );
 }

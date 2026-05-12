@@ -25,12 +25,12 @@ export default async function DeviceLayout({
   }
 
   return (
-    <div className="-m-6 flex flex-col">
-      <div className="border-b border-gray-200 bg-white px-6 pt-4 pb-0">
-        <h1 className="mb-1 text-xl font-semibold text-gray-900">
+    <div className="-mx-6 -mt-6 flex flex-col">
+      <div className="border-b border-white/8 px-6 pt-5 pb-0">
+        <h1 className="mb-1 text-xl font-semibold text-white">
           {device.label ?? device.serial}
         </h1>
-        <p className="mb-3 text-sm text-gray-500">
+        <p className="mb-4 text-sm text-gray-500">
           Serial: {device.serial}
         </p>
       </div>

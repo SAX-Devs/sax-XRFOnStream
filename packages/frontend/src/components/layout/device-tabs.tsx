@@ -28,7 +28,7 @@ export function DeviceTabs({ deviceId }: DeviceTabsProps) {
   const tabs = getTabs(deviceId);
 
   return (
-    <nav className="flex gap-1 border-b border-gray-200 bg-white px-6">
+    <nav className="flex gap-1 border-b border-white/8 px-6">
       {tabs.map((tab) => {
         const isActive = pathname === tab.href;
         return (
@@ -37,8 +37,8 @@ export function DeviceTabs({ deviceId }: DeviceTabsProps) {
             href={tab.href}
             className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
               isActive
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                ? "border-red-500 text-white"
+                : "border-transparent text-gray-500 hover:border-white/20 hover:text-gray-300"
             }`}
           >
             {tab.label}

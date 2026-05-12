@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { PUBLIC_ROUTES, ROUTES } from "@/constants/routes";
+import { ADMIN_ROLES } from "@/constants/roles";
+import type { UserRole } from "@/types/auth";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,6 +24,14 @@ export async function proxy(request: NextRequest) {
   // Authenticated user on login page → redirect to devices
   if (user && pathname === ROUTES.LOGIN) {
     return NextResponse.redirect(new URL(ROUTES.DEVICES, request.url));
+  }
+
+  // Admin routes require admin role (sax_admin or tenant_admin)
+  if (user && pathname.startsWith("/admin")) {
+    const role = (user.app_metadata?.role as UserRole) ?? "viewer";
+    if (!ADMIN_ROLES.includes(role)) {
+      return NextResponse.redirect(new URL(ROUTES.DEVICES, request.url));
+    }
   }
 
   return supabaseResponse;
