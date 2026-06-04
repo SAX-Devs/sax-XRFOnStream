@@ -110,10 +110,11 @@ export function GateValve({
           x={labelX}
           y={labelY}
           textAnchor={textAnchor}
-          fill="#cbd5e1"
-          fontSize="9"
+          fill="#e2e8f0"
+          fontSize="11"
           fontFamily="ui-sans-serif, system-ui"
-          fontWeight="500"
+          fontWeight="600"
+          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85)" }}
         >
           {label}
         </text>

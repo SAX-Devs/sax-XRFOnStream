@@ -5,6 +5,7 @@ interface BallValveProps {
   label?: string;
   tag?: string;
   size?: number;
+  labelPosition?: "top" | "bottom" | "left" | "right";
 }
 
 export function BallValve({
@@ -14,6 +15,7 @@ export function BallValve({
   label,
   tag,
   size = 26,
+  labelPosition = "bottom",
 }: BallValveProps) {
   const half = size / 2;
   const stateColor = isOpen ? "#10b981" : "#ef4444";
@@ -22,6 +24,30 @@ export function BallValve({
     transition:
       "fill 0.4s ease-in-out, stroke 0.4s ease-in-out, opacity 0.4s ease-in-out, x1 0.4s ease-in-out, y1 0.4s ease-in-out, x2 0.4s ease-in-out, y2 0.4s ease-in-out",
   };
+
+  const isSideLabel = labelPosition === "left" || labelPosition === "right";
+  const labelX =
+    labelPosition === "right"
+      ? half + 14
+      : labelPosition === "left"
+        ? -(half + 14)
+        : 0;
+  const labelY = isSideLabel
+    ? 0
+    : labelPosition === "bottom"
+      ? half + 14
+      : -half - 18;
+  const tagY = isSideLabel
+    ? 12
+    : labelPosition === "bottom"
+      ? half + 25
+      : -half - 28;
+  const textAnchor: "start" | "end" | "middle" =
+    labelPosition === "right"
+      ? "start"
+      : labelPosition === "left"
+        ? "end"
+        : "middle";
 
   return (
     <g transform={`translate(${x}, ${y})`}>
@@ -96,13 +122,14 @@ export function BallValve({
 
       {label && (
         <text
-          x="0"
-          y={half + 14}
-          textAnchor="middle"
-          fill="#cbd5e1"
-          fontSize="9"
+          x={labelX}
+          y={labelY}
+          textAnchor={textAnchor}
+          fill="#e2e8f0"
+          fontSize="11"
           fontFamily="ui-sans-serif, system-ui"
-          fontWeight="500"
+          fontWeight="600"
+          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85)" }}
         >
           {label}
         </text>
@@ -110,9 +137,9 @@ export function BallValve({
 
       {tag && (
         <text
-          x="0"
-          y={half + 25}
-          textAnchor="middle"
+          x={labelX}
+          y={tagY}
+          textAnchor={textAnchor}
           fill="#64748b"
           fontSize="8"
           fontFamily="ui-monospace, monospace"

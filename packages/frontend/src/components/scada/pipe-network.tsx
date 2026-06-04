@@ -68,53 +68,38 @@ export function PipeNetwork() {
       <Pipe id="pipe-brine-to-merger" d="M 215 220 L 320 220 L 320 165" />
 
       {/* === COMBINED Water+Brine → PUMP (the blue module) === */}
-      <Pipe id="pipe-merged-to-pump" d="M 320 165 L 510 165" />
+      <Pipe id="pipe-merged-to-pump" d="M 320 165 L 630 165" />
 
       {/* === BRINE RETRO Output 1 — recirculation to BRINE pipe (Retro Valve out) === */}
       {/* Joins Brine horizontal pipe at (250, 220) before the merger */}
       <Pipe id="pipe-retro-out-feed" d="M 160 440 L 200 440" />
       <Pipe id="pipe-retro-out-up" d="M 215 440 L 250 440 L 250 220" />
 
-      {/* === BRINE RETRO Output 2 — joins detector drain BEFORE the Exit Valve === */}
-      {/* Single horizontal at y=490, joining the detector→exit pipe at (540, 490) */}
+      {/* === BRINE RETRO Output 2 — joins detector drain BEFORE the Outlet Valve === */}
+      {/* Single horizontal at y=490, joining the chamber→outlet pipe at (660, 490) */}
       <Pipe id="pipe-retro-in-feed" d="M 160 490 L 200 490" />
-      <Pipe id="pipe-retro-in-to-drain" d="M 215 490 L 540 490" />
+      <Pipe id="pipe-retro-in-to-drain" d="M 215 490 L 660 490" />
 
-      {/* === LIQUID line — Pump bottom → Detector chamber (direct, no valve) === */}
-      <Pipe id="pipe-pump-to-detector" d="M 540 195 L 540 285" />
+      {/* === LIQUID line — Pump → Analysis chamber inlet (top) === */}
+      <Pipe id="pipe-pump-to-analysis" d="M 660 195 L 660 310" />
 
-      {/* === GAS line — Atmospheric → Inlet Valve → Detector chamber === */}
-      {/* Inlet Valve belongs to the vacuum module. Its other side is open to atmosphere. */}
-      <Pipe id="pipe-atm-to-inlet" d="M 605 190 L 605 222" />
-      <Pipe id="pipe-inlet-to-detector-air" d="M 605 248 L 605 285" />
+      {/* === BYPASS line — Inlet Valve is now a liquid bypass around the pump === */}
+      {/* Tap off the feed BEFORE the pump → up and over → Inlet Valve → back into */}
+      {/* the pump-output line AFTER the pump. (Was the gas/atmosphere line.) */}
+      <Pipe id="pipe-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 212" />
+      <Pipe id="pipe-bypass-out" d="M 738 238 L 738 265 L 660 265" />
 
-      {/* === INTERCHANGER → DETECTOR (adjacent, short connection) === */}
-      <Pipe id="pipe-interchanger-detector" d="M 500 320 L 520 320" />
-
-      {/* === DETECTOR drain → Exit Valve → off-screen (single line, no Outlet Valve here) === */}
-      <Pipe id="pipe-detector-to-exit" d="M 540 380 L 540 510" />
-      {/* Exit drain extends past the retro-drain junction at (540,555) and off-screen */}
-      <Pipe id="pipe-exit-drain" d="M 540 525 L 540 585" />
-
-      {/* === VACUUM line: Detector → Outlet Valve → Vacuum Pumps === */}
-      {/* Pipe routed BELOW the Generator Rx (y=290-350) and to the RIGHT of its body (x=650-740) */}
-      <Pipe
-        id="pipe-detector-to-outlet"
-        d="M 630 372 L 753 372 L 753 425"
-      />
-      <Pipe id="pipe-outlet-to-vac1" d="M 767 425 L 805 425" />
-      <Pipe id="pipe-vac1-to-vac2" d="M 830 450 L 830 475" />
-      {/* VP-002 → Purge Valve → off-screen vent */}
-      <Pipe id="pipe-vac2-to-purge" d="M 830 525 L 830 540" />
-      <Pipe id="pipe-purge-vent" d="M 830 570 L 830 590" />
-
-      {/* === GENERATOR → DETECTOR (X-ray housing connection) === */}
-      <Pipe id="pipe-gen-to-detector" d="M 680 320 L 630 320" />
+      {/* === Analysis chamber drain (bottom) → Outlet Valve → off-screen === */}
+      <Pipe id="pipe-analysis-to-exit" d="M 660 398 L 660 525" />
+      {/* Outlet drain extends past the valve and off-screen */}
+      <Pipe id="pipe-exit-drain" d="M 660 540 L 660 585" />
 
       {/* === Junction markers — make T-junctions explicit (P&ID convention) === */}
       <JunctionDot cx={320} cy={165} /> {/* Water + Brine merger */}
       <JunctionDot cx={250} cy={220} /> {/* Retro recirculation joins Brine pipe */}
-      <JunctionDot cx={540} cy={490} /> {/* Retro drain joins detector drain BEFORE Exit Valve */}
+      <JunctionDot cx={660} cy={490} /> {/* Retro drain joins chamber drain BEFORE Outlet Valve */}
+      <JunctionDot cx={595} cy={165} /> {/* Bypass taps the feed line before the pump */}
+      <JunctionDot cx={660} cy={265} /> {/* Bypass rejoins the pump-output line after the pump */}
     </g>
   );
 }

@@ -44,8 +44,10 @@ interface ParamsPanelProps {
     cabinetTemp: number;
     tubeTemp: number;
     density: number;
-    vacuumCondition: string;
     interchangerPosition: string;
+    chamberLock: string;
+    maintenanceDoor: string;
+    chamberLead: string;
   };
 }
 
@@ -57,8 +59,10 @@ const DEFAULT_PARAMS = {
   cabinetTemp: 24.3,
   tubeTemp: 45.1,
   density: 1.21,
-  vacuumCondition: "Vacuum I",
-  interchangerPosition: "Chamber",
+  interchangerPosition: "NORMAL",
+  chamberLock: "LOCKED",
+  maintenanceDoor: "CLOSED",
+  chamberLead: "OK",
 };
 
 export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
@@ -100,8 +104,28 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
           value={params.density.toFixed(2)}
           unit="Kg/L"
         />
-        <ParamCard label="Vacuum" value={params.vacuumCondition} />
-        <ParamCard label="Interchanger" value={params.interchangerPosition} />
+        <ParamCard
+          label="Interchanger"
+          value={params.interchangerPosition}
+          status={
+            params.interchangerPosition === "RECALIBRATION" ? "warning" : "normal"
+          }
+        />
+        <ParamCard
+          label="Chamber Lock"
+          value={params.chamberLock}
+          status={params.chamberLock === "UNLOCKED" ? "critical" : "normal"}
+        />
+        <ParamCard
+          label="Maintenance"
+          value={params.maintenanceDoor}
+          status={params.maintenanceDoor === "OPEN" ? "critical" : "normal"}
+        />
+        <ParamCard
+          label="Chamber Lead"
+          value={params.chamberLead}
+          status={params.chamberLead === "LEAK" ? "critical" : "normal"}
+        />
       </div>
     </div>
   );

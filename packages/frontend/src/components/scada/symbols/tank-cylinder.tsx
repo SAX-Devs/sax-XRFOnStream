@@ -7,6 +7,8 @@ interface TankCylinderProps {
   fluidColor: string;
   fluidLevel?: number;
   tag?: string;
+  /** Where the name is drawn: centred inside the tank, or as a title above it. */
+  labelPosition?: "inside" | "above";
 }
 
 export function TankCylinder({
@@ -18,6 +20,7 @@ export function TankCylinder({
   fluidColor,
   fluidLevel = 0.7,
   tag,
+  labelPosition = "inside",
 }: TankCylinderProps) {
   const ellipseRy = 8;
   const fluidTop = y + ellipseRy + (height - ellipseRy * 2) * (1 - fluidLevel);
@@ -115,13 +118,13 @@ export function TankCylinder({
         strokeOpacity="0.4"
       />
 
-      {/* Label */}
+      {/* Label — inside the tank, or as a title above it */}
       <text
         x={x + width / 2}
-        y={y + height / 2 + 4}
+        y={labelPosition === "above" ? y - 8 : y + height / 2 + 4}
         textAnchor="middle"
         fill="#f1f5f9"
-        fontSize="13"
+        fontSize={labelPosition === "above" ? 12 : 13}
         fontWeight="600"
         fontFamily="ui-sans-serif, system-ui"
         style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}

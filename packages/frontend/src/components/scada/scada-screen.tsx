@@ -13,6 +13,9 @@ interface ScadaScreenProps {
 }
 
 export function ScadaScreen({ userLabel, userRole }: ScadaScreenProps) {
+  // P&ID tags are clutter for the operator view; only show them in the Service screen.
+  const showTags = userRole === "service";
+
   return (
     <div className="space-y-3">
       <DiagramHeader userLabel={userLabel} userRole={userRole} />
@@ -27,7 +30,7 @@ export function ScadaScreen({ userLabel, userRole }: ScadaScreenProps) {
         </div>
 
         {/* Center — process diagram */}
-        <ProcessDiagram />
+        <ProcessDiagram showTags={showTags} />
 
         {/* Right column — parameters */}
         <ParamsPanel />

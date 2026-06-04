@@ -14,11 +14,7 @@ interface FlowState {
   retroValveIn: boolean;
   inletValve: boolean;
   outletValve: boolean;
-  exitValve: boolean;
-  purgeValve: boolean;
   pumpState: "FORWARD" | "REVERSE" | "STOP";
-  vacuumPump1: boolean;
-  vacuumPump2: boolean;
 }
 
 interface FlowLayerProps {
@@ -30,8 +26,6 @@ const COLORS = {
   brine: "#fbbf24", // amber-400
   retroBrine: "#f59e0b", // amber-500
   mixed: "#22d3ee", // cyan-400 (water + brine combined)
-  vacuum: "#c084fc", // purple-400 (gas exiting toward vacuum pumps)
-  atmospheric: "#67e8f9", // cyan-300 (atmospheric air entering through Inlet Valve)
   drain: "#94a3b8", // slate-400
 };
 
@@ -120,22 +114,19 @@ export function FlowLayer({ state }: FlowLayerProps) {
   const reverse = state.pumpState === "REVERSE";
 
   // === Active flow logic ===
-  // Liquid path: source valves → pump → detector. The Inlet Valve does NOT
-  // gate this path — it belongs to the vacuum module (gas/atmosphere) and is
-  // independent of the liquid sample line.
+  // Liquid path: source valves → pump → detector.
   const waterFlow = state.waterValve && pumping;
   const brineFlow = state.brineValve && pumping;
   const retroOutFlow = state.retroValveOut && pumping;
   const mainFlow = waterFlow || brineFlow || retroOutFlow;
   const pumpToDetectorFlow = mainFlow;
 
-  // Gas path (vacuum module)
-  const atmosphericInflow = state.inletValve; // Air drawn in from atmosphere
-  const vacuum1Flow = state.outletValve && state.vacuumPump1;
-  const vacuum2Flow = vacuum1Flow && state.vacuumPump2;
-  const purgeFlow = vacuum2Flow && state.purgeValve;
+  // Bypass path: when the Inlet Valve is open, sample flows around the pump
+  // (feed → Inlet Valve → pump-output line) in parallel with the pump.
+  const bypassFlow = state.inletValve && mainFlow;
 
-  const exitFlow = state.exitValve;
+  // Drain path: chamber → Outlet Valve → off-screen vent. Gated on outletValve.
+  const drainFlow = state.outletValve;
   const retroInFlow = state.retroValveIn;
 
   return (
@@ -146,28 +137,20 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <path id="flow-water-merger" d="M 215 110 L 320 110 L 320 165" />
         <path id="flow-brine-feed" d="M 160 220 L 200 220" />
         <path id="flow-brine-merger" d="M 215 220 L 320 220 L 320 165" />
-        <path id="flow-merger-pump" d="M 320 165 L 510 165" />
-        <path id="flow-pump-to-detector" d="M 540 195 L 540 285" />
+        <path id="flow-merger-pump" d="M 320 165 L 630 165" />
+        <path id="flow-pump-to-detector" d="M 660 195 L 660 310" />
 
-        {/* Gas path — atmospheric air entering through Inlet Valve */}
-        <path id="flow-atm-to-detector" d="M 605 190 L 605 285" />
+        {/* Bypass path — sample routed around the pump through the Inlet Valve */}
+        <path id="flow-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 212" />
+        <path id="flow-bypass-out" d="M 738 238 L 738 265 L 660 265" />
 
         <path id="flow-retro-out-feed" d="M 160 440 L 200 440" />
         <path id="flow-retro-out-up" d="M 215 440 L 250 440 L 250 220" />
         <path id="flow-retro-in-feed" d="M 160 490 L 200 490" />
-        <path id="flow-retro-in-drain" d="M 215 490 L 540 490" />
+        <path id="flow-retro-in-drain" d="M 215 490 L 660 490" />
 
-        <path
-          id="flow-detector-outlet"
-          d="M 630 372 L 753 372 L 753 425"
-        />
-        <path id="flow-outlet-vac1" d="M 767 425 L 805 425" />
-        <path id="flow-vac1-vac2" d="M 830 450 L 830 475" />
-        <path id="flow-vac2-purge" d="M 830 525 L 830 540" />
-        <path id="flow-purge-vent" d="M 830 570 L 830 590" />
-
-        <path id="flow-detector-exit" d="M 540 380 L 540 510" />
-        <path id="flow-exit-drain" d="M 540 525 L 540 585" />
+        <path id="flow-detector-exit" d="M 660 398 L 660 525" />
+        <path id="flow-exit-drain" d="M 660 540 L 660 585" />
       </defs>
 
       {/* === Water flow (tank → merger) === */}
@@ -247,68 +230,26 @@ export function FlowLayer({ state }: FlowLayerProps) {
         />
       )}
 
-      {/* === Atmospheric air → Inlet Valve → Detector chamber === */}
-      {atmosphericInflow && (
-        <Flow
-          pathId="flow-atm-to-detector"
-          color={COLORS.atmospheric}
-          duration={1.6}
-          particleCount={5}
-          type="gas"
-        />
-      )}
-
-      {/* === Vacuum line (gas flow toward pumps and out the purge) === */}
-      {vacuum1Flow && (
+      {/* === Bypass — sample flowing around the pump through the Inlet Valve === */}
+      {bypassFlow && (
         <>
           <Flow
-            pathId="flow-detector-outlet"
-            color={COLORS.vacuum}
-            duration={2.0}
-            particleCount={5}
-            type="gas"
+            pathId="flow-bypass-in"
+            color={COLORS.mixed}
+            duration={2.2}
+            reverse={reverse}
           />
           <Flow
-            pathId="flow-outlet-vac1"
-            color={COLORS.vacuum}
-            duration={0.9}
-            particleCount={3}
-            type="gas"
+            pathId="flow-bypass-out"
+            color={COLORS.mixed}
+            duration={1.4}
+            reverse={reverse}
           />
         </>
       )}
 
-      {vacuum2Flow && (
-        <Flow
-          pathId="flow-vac1-vac2"
-          color={COLORS.vacuum}
-          duration={0.9}
-          particleCount={3}
-          type="gas"
-        />
-      )}
-
-      {purgeFlow && (
-        <>
-          <Flow
-            pathId="flow-vac2-purge"
-            color={COLORS.vacuum}
-            duration={0.9}
-            particleCount={3}
-            type="gas"
-          />
-          <Flow
-            pathId="flow-purge-vent"
-            color={COLORS.vacuum}
-            duration={1.0}
-            particleCount={3}
-            type="gas"
-          />
-        </>
-      )}
-
-      {/* === Drain line (Detector → Exit Valve → off-screen) === */}
-      {exitFlow && (
+      {/* === Drain line (Analysis chamber → Outlet Valve → off-screen) === */}
+      {drainFlow && (
         <>
           <Flow
             pathId="flow-detector-exit"
