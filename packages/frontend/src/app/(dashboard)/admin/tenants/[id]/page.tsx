@@ -4,9 +4,6 @@ import { requireRole } from "@/lib/auth/session";
 import { getTenant, getTenantDevices } from "@/services/tenants";
 import { getTenantUsers } from "@/services/users";
 import { ROUTES } from "@/constants/routes";
-import { ROLE_LABELS } from "@/constants/roles";
-import type { Device } from "@/types/devices";
-import type { UserListItem } from "@/types/users";
 import { TenantDetailActions } from "./tenant-detail-actions";
 
 interface TenantDetailPageProps {

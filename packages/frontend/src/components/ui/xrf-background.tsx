@@ -69,7 +69,6 @@ const EMISSION_COLORS = [
   "#ff6e40",
 ];
 
-const PHOTON_COLOR = "#ff1744";
 const CONNECTION_MAX_DIST = 180;
 
 // ---------------------------------------------------------------------------

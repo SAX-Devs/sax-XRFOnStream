@@ -1,7 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Tenant, TenantWithCounts } from "@/types/tenants";
 import type { Device } from "@/types/devices";
-import type { UserRole } from "@/types/auth";
 
 /**
  * Fetches all tenants with their device and user counts.
