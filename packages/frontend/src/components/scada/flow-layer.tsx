@@ -141,8 +141,8 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <path id="flow-pump-to-detector" d="M 660 195 L 660 310" />
 
         {/* Bypass path — sample routed around the pump through the Inlet Valve */}
-        <path id="flow-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 212" />
-        <path id="flow-bypass-out" d="M 738 238 L 738 265 L 660 265" />
+        <path id="flow-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 198" />
+        <path id="flow-bypass-out" d="M 738 225 L 738 240 L 660 240" />
 
         <path id="flow-retro-out-feed" d="M 160 440 L 200 440" />
         <path id="flow-retro-out-up" d="M 215 440 L 250 440 L 250 220" />

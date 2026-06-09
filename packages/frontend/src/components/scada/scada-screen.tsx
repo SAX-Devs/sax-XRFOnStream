@@ -20,7 +20,7 @@ export function ScadaScreen({ userLabel, userRole }: ScadaScreenProps) {
     <div className="space-y-3">
       <DiagramHeader userLabel={userLabel} userRole={userRole} />
 
-      <div className="grid grid-cols-[180px_minmax(0,1fr)_185px] gap-3 items-start">
+      <div className="grid grid-cols-[180px_minmax(0,1fr)_340px] gap-3 items-start">
         {/* Left column — Spectrum, Stop, Status, Messages */}
         <div className="flex flex-col gap-3">
           <SpectrumButton />

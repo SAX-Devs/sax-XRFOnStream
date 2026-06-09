@@ -34,45 +34,53 @@ export function MaintenanceDoor({
 
   return (
     <g>
-      {/* Alarm halo when the door is open */}
-      {!closed && (
-        <rect
-          x={x - 3}
-          y={y - 3}
-          width={width + 6}
-          height={height + 6}
-          rx="2"
-          fill="#ef4444"
-          opacity="0.18"
-          filter="url(#valve-glow)"
-        >
+      {/* Alarm halo — always rendered; opacity fades in/out so the alarm
+          doesn't pop the moment the door starts moving. The inner pulse
+          animation runs regardless and only shows once opacity is > 0. */}
+      <rect
+        x={x - 3}
+        y={y - 3}
+        width={width + 6}
+        height={height + 6}
+        rx="2"
+        fill="#ef4444"
+        opacity={closed ? 0 : 0.18}
+        filter="url(#valve-glow)"
+        style={{ transition: "opacity 0.8s ease-in-out" }}
+      >
+        {!closed && (
           <animate
             attributeName="opacity"
             values="0.12;0.35;0.12"
             dur="1.2s"
             repeatCount="indefinite"
           />
-        </rect>
-      )}
+        )}
+      </rect>
 
-      {/* Door opening (the dark void behind the panel, visible when open) */}
-      {!closed && (
-        <rect
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          rx="1.5"
-          fill="#020617"
-          stroke="#1e293b"
-          strokeWidth="0.5"
-        />
-      )}
+      {/* Door opening (dark void) — always rendered; fades in as the panel
+          swings out so the void is gradually revealed. */}
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx="1.5"
+        fill="#020617"
+        stroke="#1e293b"
+        strokeWidth="0.5"
+        opacity={closed ? 0 : 1}
+        style={{ transition: "opacity 0.6s ease-in-out 0.2s" }}
+      />
 
-      {/* Door panel — rotates around the top-left hinge when open */}
+      {/* Door panel — CSS transform with transformOrigin so the rotation can
+          be transitioned smoothly between CLOSED and OPEN poses. */}
       <g
-        transform={`rotate(${closed ? 0 : openAngle} ${x} ${y})`}
-        style={{ transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" }}
+        style={{
+          transform: `rotate(${closed ? 0 : openAngle}deg)`,
+          transformOrigin: `${x}px ${y}px`,
+          transition: "transform 1s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
       >
         {/* Panel body */}
         <rect

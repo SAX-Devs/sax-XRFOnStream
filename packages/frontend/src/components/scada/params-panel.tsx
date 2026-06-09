@@ -41,13 +41,19 @@ interface ParamsPanelProps {
     pumpState: string;
     flowIn: number;
     flowOut: number;
+    atmosphericStatus: string;
+    vacuumSensor: number;
     cabinetTemp: number;
     tubeTemp: number;
-    density: number;
+    tubeHighVoltage: number;
+    beamCurrent: number;
     interchangerPosition: string;
     chamberLock: string;
     maintenanceDoor: string;
-    chamberLead: string;
+    chamberLeak: string;
+    dcOk: boolean;
+    tankPressureHigh: boolean;
+    tankPressureLow: boolean;
   };
 }
 
@@ -56,13 +62,19 @@ const DEFAULT_PARAMS = {
   pumpState: "FORWARD",
   flowIn: 12.5,
   flowOut: 12.4,
+  atmosphericStatus: "Vacuum",
+  vacuumSensor: 0.972,
   cabinetTemp: 24.3,
   tubeTemp: 45.1,
-  density: 1.21,
+  tubeHighVoltage: 49.988,
+  beamCurrent: 289.5,
   interchangerPosition: "NORMAL",
   chamberLock: "LOCKED",
   maintenanceDoor: "CLOSED",
-  chamberLead: "OK",
+  chamberLeak: "OK",
+  dcOk: true,
+  tankPressureHigh: true,
+  tankPressureLow: false,
 };
 
 export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
@@ -75,7 +87,7 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
         <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.7)]" />
       </div>
 
-      <div className="space-y-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         <ParamCard label="Operation Mode" value={params.operationMode} />
         <ParamCard label="Pump State" value={params.pumpState} />
         <ParamCard
@@ -89,6 +101,15 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
           unit="L/m"
         />
         <ParamCard
+          label="Atmosphere"
+          value={params.atmosphericStatus}
+        />
+        <ParamCard
+          label="Vacuum"
+          value={params.vacuumSensor.toFixed(3)}
+          unit="kPa"
+        />
+        <ParamCard
           label="Cabinet T"
           value={params.cabinetTemp.toFixed(1)}
           unit="°C"
@@ -100,9 +121,14 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
           status={params.tubeTemp > 50 ? "warning" : "normal"}
         />
         <ParamCard
-          label="Density"
-          value={params.density.toFixed(2)}
-          unit="Kg/L"
+          label="Tube HV"
+          value={params.tubeHighVoltage.toFixed(2)}
+          unit="kV"
+        />
+        <ParamCard
+          label="Beam Current"
+          value={params.beamCurrent.toFixed(1)}
+          unit="µA"
         />
         <ParamCard
           label="Interchanger"
@@ -117,14 +143,29 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
           status={params.chamberLock === "UNLOCKED" ? "critical" : "normal"}
         />
         <ParamCard
-          label="Maintenance"
+          label="Door Lock"
           value={params.maintenanceDoor}
           status={params.maintenanceDoor === "OPEN" ? "critical" : "normal"}
         />
         <ParamCard
-          label="Chamber Lead"
-          value={params.chamberLead}
-          status={params.chamberLead === "LEAK" ? "critical" : "normal"}
+          label="Chamber Leak"
+          value={params.chamberLeak}
+          status={params.chamberLeak === "LEAK" ? "critical" : "normal"}
+        />
+        <ParamCard
+          label="DC Power"
+          value={params.dcOk ? "OK" : "FAIL"}
+          status={params.dcOk ? "normal" : "critical"}
+        />
+        <ParamCard
+          label="Tank Press High"
+          value={params.tankPressureHigh ? "HIGH" : "OK"}
+          status={params.tankPressureHigh ? "critical" : "normal"}
+        />
+        <ParamCard
+          label="Tank Press Low"
+          value={params.tankPressureLow ? "LOW" : "OK"}
+          status={params.tankPressureLow ? "critical" : "normal"}
         />
       </div>
     </div>

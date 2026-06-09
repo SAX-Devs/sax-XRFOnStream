@@ -6,6 +6,9 @@ interface GateValveProps {
   tag?: string;
   size?: number;
   labelPosition?: "top" | "bottom" | "left" | "right";
+  /** P&ID body axis. "horizontal" → bowtie left-right, stem up. */
+  /** "vertical" → bowtie up-down, stem to the left (perpendicular to flow). */
+  orientation?: "horizontal" | "vertical";
 }
 
 export function GateValve({
@@ -16,6 +19,7 @@ export function GateValve({
   tag,
   size = 28,
   labelPosition = "bottom",
+  orientation = "horizontal",
 }: GateValveProps) {
   const half = size / 2;
   const stateColor = isOpen ? "#10b981" : "#ef4444";
@@ -64,45 +68,49 @@ export function GateValve({
         style={colorTransition}
       />
 
-      {/* Bowtie body — two triangles meeting at center */}
-      <path
-        d={`M ${-half},${-half * 0.7} L 0,0 L ${-half},${half * 0.7} Z`}
-        fill={bodyFill}
-        stroke={stateColor}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        style={colorTransition}
-      />
-      <path
-        d={`M ${half},${-half * 0.7} L 0,0 L ${half},${half * 0.7} Z`}
-        fill={bodyFill}
-        stroke={stateColor}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        style={colorTransition}
-      />
+      {/* Body + stem + handwheel — wrapped so we can rotate the assembly to
+          match the pipe orientation without disturbing the label/tag below. */}
+      <g transform={orientation === "vertical" ? "rotate(-90)" : undefined}>
+        {/* Bowtie body — two triangles meeting at center */}
+        <path
+          d={`M ${-half},${-half * 0.7} L 0,0 L ${-half},${half * 0.7} Z`}
+          fill={bodyFill}
+          stroke={stateColor}
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          style={colorTransition}
+        />
+        <path
+          d={`M ${half},${-half * 0.7} L 0,0 L ${half},${half * 0.7} Z`}
+          fill={bodyFill}
+          stroke={stateColor}
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          style={colorTransition}
+        />
 
-      {/* Stem */}
-      <line
-        x1="0"
-        y1={-half * 0.6}
-        x2="0"
-        y2={-half * 1.1}
-        stroke={stateColor}
-        strokeWidth="1.5"
-        style={colorTransition}
-      />
+        {/* Stem */}
+        <line
+          x1="0"
+          y1={-half * 0.6}
+          x2="0"
+          y2={-half * 1.1}
+          stroke={stateColor}
+          strokeWidth="1.5"
+          style={colorTransition}
+        />
 
-      {/* Handwheel (small circle on top) */}
-      <circle
-        cx="0"
-        cy={-half * 1.25}
-        r="3"
-        fill={stateColor}
-        stroke="#0f172a"
-        strokeWidth="0.5"
-        style={colorTransition}
-      />
+        {/* Handwheel (small circle on top) */}
+        <circle
+          cx="0"
+          cy={-half * 1.25}
+          r="3"
+          fill={stateColor}
+          stroke="#0f172a"
+          strokeWidth="0.5"
+          style={colorTransition}
+        />
+      </g>
 
       {/* Label */}
       {label && (

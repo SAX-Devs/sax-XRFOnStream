@@ -26,7 +26,7 @@ export default async function DashboardLayout({
       <TopNav email={email} userRole={role} />
 
       <main className="flex-1 px-6 py-6">
-        <div className="mx-auto max-w-7xl">{children}</div>
+        <div className="mx-auto max-w-[1480px]">{children}</div>
       </main>
     </div>
   );

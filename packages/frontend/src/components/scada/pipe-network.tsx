@@ -86,8 +86,8 @@ export function PipeNetwork() {
       {/* === BYPASS line — Inlet Valve is now a liquid bypass around the pump === */}
       {/* Tap off the feed BEFORE the pump → up and over → Inlet Valve → back into */}
       {/* the pump-output line AFTER the pump. (Was the gas/atmosphere line.) */}
-      <Pipe id="pipe-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 212" />
-      <Pipe id="pipe-bypass-out" d="M 738 238 L 738 265 L 660 265" />
+      <Pipe id="pipe-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 198" />
+      <Pipe id="pipe-bypass-out" d="M 738 225 L 738 240 L 660 240" />
 
       {/* === Analysis chamber drain (bottom) → Outlet Valve → off-screen === */}
       <Pipe id="pipe-analysis-to-exit" d="M 660 398 L 660 525" />
@@ -99,7 +99,7 @@ export function PipeNetwork() {
       <JunctionDot cx={250} cy={220} /> {/* Retro recirculation joins Brine pipe */}
       <JunctionDot cx={660} cy={490} /> {/* Retro drain joins chamber drain BEFORE Outlet Valve */}
       <JunctionDot cx={595} cy={165} /> {/* Bypass taps the feed line before the pump */}
-      <JunctionDot cx={660} cy={265} /> {/* Bypass rejoins the pump-output line after the pump */}
+      <JunctionDot cx={660} cy={240} /> {/* Bypass rejoins the pump-output line after the pump */}
     </g>
   );
 }

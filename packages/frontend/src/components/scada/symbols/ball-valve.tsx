@@ -6,6 +6,9 @@ interface BallValveProps {
   tag?: string;
   size?: number;
   labelPosition?: "top" | "bottom" | "left" | "right";
+  /** P&ID handle orientation. "horizontal" → handle parallel to a horizontal */
+  /** pipe when open. "vertical" → handle parallel to a vertical pipe when open. */
+  orientation?: "horizontal" | "vertical";
 }
 
 export function BallValve({
@@ -16,6 +19,7 @@ export function BallValve({
   tag,
   size = 26,
   labelPosition = "bottom",
+  orientation = "horizontal",
 }: BallValveProps) {
   const half = size / 2;
   const stateColor = isOpen ? "#10b981" : "#ef4444";
@@ -86,17 +90,24 @@ export function BallValve({
         style={colorTransition}
       />
 
-      {/* Indicator line — horizontal when open, vertical when closed */}
-      <line
-        x1={isOpen ? -half * 0.5 : 0}
-        y1={isOpen ? 0 : -half * 0.5}
-        x2={isOpen ? half * 0.5 : 0}
-        y2={isOpen ? 0 : half * 0.5}
-        stroke={stateColor}
-        strokeWidth="2"
-        strokeLinecap="round"
-        style={colorTransition}
-      />
+      {/* Indicator line — handle parallel to flow = OPEN, perpendicular = CLOSED.
+          For a vertical pipe the "open" pose is a vertical line. */}
+      {(() => {
+        const horizontalLine =
+          orientation === "horizontal" ? isOpen : !isOpen;
+        return (
+          <line
+            x1={horizontalLine ? -half * 0.5 : 0}
+            y1={horizontalLine ? 0 : -half * 0.5}
+            x2={horizontalLine ? half * 0.5 : 0}
+            y2={horizontalLine ? 0 : half * 0.5}
+            stroke={stateColor}
+            strokeWidth="2"
+            strokeLinecap="round"
+            style={colorTransition}
+          />
+        );
+      })()}
 
       {/* Stem on top */}
       <line

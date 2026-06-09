@@ -50,7 +50,7 @@ export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
     tankPercentLevel: 50,
     chamberLocked: true,
     maintenanceDoorClosed: true,
-    chamberLeadOk: true,
+    chamberLeakOk: true,
     flowRate: 12.5,
     flowRateOut: 12.4,
   };
@@ -62,7 +62,7 @@ export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
     sampleState.generatorHvOn &&
     sampleState.chamberLocked &&
     sampleState.maintenanceDoorClosed &&
-    sampleState.chamberLeadOk;
+    sampleState.chamberLeakOk;
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#020617] shadow-2xl">
@@ -166,11 +166,12 @@ export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
         {/* Formerly the atmospheric/gas line to the detector (both removed). */}
         <GateValve
           x={738}
-          y={225}
+          y={211}
           isOpen={sampleState.inletValve}
           label="Inlet Valve"
           tag={t("PV-201")}
           labelPosition="right"
+          orientation="vertical"
         />
 
         {/* === CENTRAL ASSEMBLY — two chambers facing each other === */}
@@ -234,20 +235,20 @@ export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
         />
 
         {/* === CHAMBER LEAK SENSOR — leak detector probe in the internal chamber === */}
-        {/* Two-prong electrode at the bottom-right of the internal chamber, opposite */}
+        {/* Two-prong electrode at the bottom-LEFT of the internal chamber, opposite  */}
         {/* the maintenance door. If water reaches it (e.g. a window/seal failure),   */}
         {/* the HV is interlocked off as an emergency response.                       */}
         <ChamberLeakSensor
-          x={836}
+          x={760}
           y={398}
-          dry={sampleState.chamberLeadOk}
+          dry={sampleState.chamberLeakOk}
           tag={t("LD-001")}
         />
 
-        {/* === MAINTENANCE DOOR — access panel at the bottom of the internal chamber === */}
+        {/* === MAINTENANCE DOOR — access panel at the bottom-RIGHT of the internal chamber === */}
         {/* Opens for service on the tube/detector side; while open the HV is interlocked off. */}
         <MaintenanceDoor
-          x={748}
+          x={806}
           y={398}
           width={48}
           height={8}
@@ -256,14 +257,16 @@ export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
         />
 
 
-        {/* === FLOW METER — inline flow element after the pump === */}
-        {/* Sits on the pipe at the old pressure-switch location and shows live flow rate. */}
+        {/* === FLOW METER — inline flow element just BEFORE the analysis chamber inlet === */}
+        {/* Co-located with the inlet pressure switch (PS on the left, FE on the right) */}
+        {/* so the two critical inlet readings sit together right at the chamber.         */}
         <FlowMeter
           x={660}
-          y={220}
+          y={288}
           flowRate={sampleState.flowRate}
           active={sampleState.pumpState !== "STOP"}
           tag={t("FE-101")}
+          displaySide="right"
         />
 
         {/* === FLOW METER — inline flow element at the chamber outlet === */}
@@ -284,7 +287,7 @@ export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
           y={265}
           pressureOk={sampleState.pressureOk}
           connectX={660}
-          connectY={302}
+          connectY={270}
           label="Pressure"
           tag={t("PS-101")}
         />
@@ -297,6 +300,7 @@ export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
           label="Outlet Valve"
           tag={t("PV-301")}
           labelPosition="right"
+          orientation="vertical"
         />
 
       </svg>
