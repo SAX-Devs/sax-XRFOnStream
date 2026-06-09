@@ -15,6 +15,10 @@ node_modules/
 out/
 .vercel
 
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/
+
 # Environment
 .env
 .env.local
