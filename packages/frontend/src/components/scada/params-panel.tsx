@@ -35,26 +35,28 @@ function ParamCard({ label, value, unit, status = "normal" }: ParamCardProps) {
   );
 }
 
+export interface ScadaParams {
+  operationMode: string;
+  pumpState: string;
+  flowIn: number;
+  flowOut: number;
+  atmosphericStatus: string;
+  vacuumSensor: number;
+  cabinetTemp: number;
+  tubeTemp: number;
+  tubeHighVoltage: number;
+  beamCurrent: number;
+  interchangerPosition: string;
+  chamberLock: string;
+  maintenanceDoor: string;
+  chamberLeak: string;
+  dcOk: boolean;
+  tankPressureHigh: boolean;
+  tankPressureLow: boolean;
+}
+
 interface ParamsPanelProps {
-  params?: {
-    operationMode: string;
-    pumpState: string;
-    flowIn: number;
-    flowOut: number;
-    atmosphericStatus: string;
-    vacuumSensor: number;
-    cabinetTemp: number;
-    tubeTemp: number;
-    tubeHighVoltage: number;
-    beamCurrent: number;
-    interchangerPosition: string;
-    chamberLock: string;
-    maintenanceDoor: string;
-    chamberLeak: string;
-    dcOk: boolean;
-    tankPressureHigh: boolean;
-    tankPressureLow: boolean;
-  };
+  params?: ScadaParams;
 }
 
 const DEFAULT_PARAMS = {

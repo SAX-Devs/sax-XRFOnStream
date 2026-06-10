@@ -2,7 +2,7 @@
 
 import { ScadaScreen } from "@/components/scada/scada-screen";
 
-export function ServiceScreen() {
+export function ServiceScreen({ deviceId }: { deviceId: string }) {
   return (
     <div className="space-y-3">
       {/* Service mode banner */}
@@ -35,7 +35,7 @@ export function ServiceScreen() {
       </div>
 
       {/* Service-mode SCADA (reuses the same diagram with full controls) */}
-      <ScadaScreen userLabel="Técnico" userRole="service" />
+      <ScadaScreen deviceId={deviceId} userLabel="Técnico" userRole="service" />
 
       {/* Auxiliary diagnostic panel (only visible in service mode) */}
       <div className="grid grid-cols-3 gap-3">

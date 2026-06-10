@@ -6,15 +6,20 @@ import { ParamsPanel } from "./params-panel";
 import { MessagesPanel } from "./messages-panel";
 import { StatusPanel } from "./status-panel";
 import { SpectrumButton, StopButton } from "./control-bar";
+import { useScadaTelemetry } from "@/hooks/use-scada-telemetry";
 
 interface ScadaScreenProps {
+  deviceId: string;
   userLabel?: string;
   userRole?: string;
 }
 
-export function ScadaScreen({ userLabel, userRole }: ScadaScreenProps) {
+export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps) {
   // P&ID tags are clutter for the operator view; only show them in the Service screen.
   const showTags = userRole === "service";
+
+  // Live telemetry → diagram visual state + parameters panel.
+  const { diagram, params } = useScadaTelemetry(deviceId);
 
   return (
     <div className="space-y-3">
@@ -30,10 +35,10 @@ export function ScadaScreen({ userLabel, userRole }: ScadaScreenProps) {
         </div>
 
         {/* Center — process diagram */}
-        <ProcessDiagram showTags={showTags} />
+        <ProcessDiagram state={diagram} showTags={showTags} />
 
         {/* Right column — parameters */}
-        <ParamsPanel />
+        <ParamsPanel params={params} />
       </div>
     </div>
   );

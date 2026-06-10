@@ -24,36 +24,45 @@ import { FlowMeter } from "./symbols/flow-meter";
 const VIEWBOX_WIDTH = 932;
 const VIEWBOX_HEIGHT = 600;
 
+/**
+ * Visual state the diagram renders. Field names are the diagram's own
+ * vocabulary; the useScadaTelemetry hook maps real equipment telemetry into
+ * this shape. `interchangerMode` only drives the arm's physical pose — the raw
+ * position string is shown in the parameters panel, not here.
+ */
+export interface ScadaDiagramState {
+  waterValve: boolean;
+  brineValve: boolean;
+  retroValveOut: boolean;
+  retroValveIn: boolean;
+  inletValve: boolean;
+  outletValve: boolean;
+  pumpState: "FORWARD" | "REVERSE" | "STOP";
+  interchangerMode: "NORMAL" | "RECAL";
+  detectorMeasuring: boolean;
+  generatorHvOn: boolean;
+  pressureOk: boolean;
+  tankLevelOk: boolean;
+  tankPercentLevel: number;
+  chamberLocked: boolean;
+  maintenanceDoorClosed: boolean;
+  chamberLeakOk: boolean;
+  flowRate: number;
+  flowRateOut: number;
+}
+
 interface ProcessDiagramProps {
+  /** Live diagram state, mapped from telemetry by useScadaTelemetry. */
+  state: ScadaDiagramState;
   /** Whether to render P&ID tags (TK-101, PV-101, etc.). Default off; the Service screen turns it on. */
   showTags?: boolean;
 }
 
-export function ProcessDiagram({ showTags = false }: ProcessDiagramProps = {}) {
+export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps) {
   // Helper: returns the tag string only when tags are enabled, undefined otherwise
   const t = (tag: string) => (showTags ? tag : undefined);
 
-  // Sample state for preview — replaced with real telemetry in sub-phase 4.2.D
-  const sampleState = {
-    waterValve: false,
-    brineValve: true,
-    retroValveOut: false,
-    retroValveIn: false,
-    inletValve: true,
-    outletValve: true,
-    pumpState: "FORWARD" as "FORWARD" | "REVERSE" | "STOP",
-    interchangerMode: "NORMAL" as "NORMAL" | "RECAL",
-    detectorMeasuring: true,
-    generatorHvOn: true,
-    pressureOk: true,
-    tankLevelOk: true,
-    tankPercentLevel: 50,
-    chamberLocked: true,
-    maintenanceDoorClosed: true,
-    chamberLeakOk: true,
-    flowRate: 12.5,
-    flowRateOut: 12.4,
-  };
+  const sampleState = state;
 
   // Safety interlock chain: the X-ray tube may only emit when the analysis
   // chamber is sealed, the maintenance door is closed, AND the leak sensor
