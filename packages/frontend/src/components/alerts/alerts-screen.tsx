@@ -1,100 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useAlerts, type AlertRecord, type AlertSeverity } from "@/hooks/use-alerts";
 
-type Severity = "info" | "warning" | "critical" | "emergency";
 type FilterState = "all" | "active" | "acknowledged";
 
-interface Alert {
-  id: number;
-  severity: Severity;
-  source: string;
-  title: string;
-  detail?: string;
-  timestamp: string;
-  acknowledged: boolean;
-  ackBy?: string;
-  ackAt?: string;
-}
-
-const SAMPLE_ALERTS: Alert[] = [
-  {
-    id: 14,
-    severity: "warning",
-    source: "temp_control",
-    title: "Cabinet T elevada",
-    detail: "Temperatura del gabinete: 24.3 °C. Umbral de advertencia: 24.0 °C.",
-    timestamp: "2026-04-28 15:42:18",
-    acknowledged: false,
-  },
-  {
-    id: 13,
-    severity: "info",
-    source: "system",
-    title: "Medición XRF completada",
-    detail: "RUN-2026-04-28-008 finalizado. Livetime 11.92 s, 48235 triggers.",
-    timestamp: "2026-04-28 15:42:30",
-    acknowledged: false,
-  },
-  {
-    id: 12,
-    severity: "critical",
-    source: "vacuum",
-    title: "Pérdida de vacío detectada",
-    detail: "Sensor de vacío reportó variación >15%. VP-001 entró en modo recuperación automática.",
-    timestamp: "2026-04-28 15:18:02",
-    acknowledged: true,
-    ackBy: "operario@sax.cl",
-    ackAt: "2026-04-28 15:21:44",
-  },
-  {
-    id: 11,
-    severity: "info",
-    source: "interchanger",
-    title: "Cambio a posición Recal",
-    detail: "Recalibración programada cada 4 horas.",
-    timestamp: "2026-04-28 14:00:08",
-    acknowledged: true,
-    ackBy: "system",
-    ackAt: "2026-04-28 14:00:09",
-  },
-  {
-    id: 10,
-    severity: "warning",
-    source: "circulation",
-    title: "Flow out menor que Flow in",
-    detail: "Diferencia de caudal: 0.3 L/m. Posible obstrucción parcial en la línea de retorno.",
-    timestamp: "2026-04-28 13:35:12",
-    acknowledged: true,
-    ackBy: "service@sax.cl",
-    ackAt: "2026-04-28 13:38:55",
-  },
-  {
-    id: 9,
-    severity: "emergency",
-    source: "generator",
-    title: "Interlock abierto",
-    detail: "Puerta de generador abierta durante operación. HV apagado automáticamente.",
-    timestamp: "2026-04-27 22:14:50",
-    acknowledged: true,
-    ackBy: "service@sax.cl",
-    ackAt: "2026-04-27 22:18:02",
-  },
-  {
-    id: 8,
-    severity: "info",
-    source: "system",
-    title: "Inicialización del equipo",
-    detail: "Secuencia de power-up completada. Todos los módulos operativos.",
-    timestamp: "2026-04-27 21:30:00",
-    acknowledged: true,
-    ackBy: "system",
-    ackAt: "2026-04-27 21:30:02",
-  },
-];
-
 const SEVERITY_CONFIG: Record<
-  Severity,
+  AlertSeverity,
   { label: string; color: string; bg: string; ring: string; icon: string }
 > = {
   info: {
@@ -127,28 +39,59 @@ const SEVERITY_CONFIG: Record<
   },
 };
 
-export function AlertsScreen() {
-  const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
+function formatTs(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("es-CL", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/** The alert detail column is JSONB — render a message field, a plain string, or fall back to compact JSON. */
+function renderDetail(detail: unknown): string | null {
+  if (detail == null) return null;
+  if (typeof detail === "string") return detail;
+  if (typeof detail === "object") {
+    const obj = detail as Record<string, unknown>;
+    if (typeof obj.message === "string") return obj.message;
+    return JSON.stringify(detail);
+  }
+  return String(detail);
+}
+
+export function AlertsScreen({ deviceId }: { deviceId: string }) {
+  const { alerts, loading, acknowledge } = useAlerts(deviceId);
+  const [severityFilter, setSeverityFilter] = useState<AlertSeverity | "all">(
+    "all"
+  );
   const [stateFilter, setStateFilter] = useState<FilterState>("all");
 
   const filtered = useMemo(() => {
-    return SAMPLE_ALERTS.filter((a) => {
+    return alerts.filter((a) => {
+      const acknowledged = a.ack_at !== null;
       if (severityFilter !== "all" && a.severity !== severityFilter) return false;
-      if (stateFilter === "active" && a.acknowledged) return false;
-      if (stateFilter === "acknowledged" && !a.acknowledged) return false;
+      if (stateFilter === "active" && acknowledged) return false;
+      if (stateFilter === "acknowledged" && !acknowledged) return false;
       return true;
     });
-  }, [severityFilter, stateFilter]);
+  }, [alerts, severityFilter, stateFilter]);
 
   const counts = useMemo(() => {
     return {
-      total: SAMPLE_ALERTS.length,
-      active: SAMPLE_ALERTS.filter((a) => !a.acknowledged).length,
-      critical: SAMPLE_ALERTS.filter(
-        (a) => !a.acknowledged && (a.severity === "critical" || a.severity === "emergency")
+      total: alerts.length,
+      active: alerts.filter((a) => a.ack_at === null).length,
+      critical: alerts.filter(
+        (a) =>
+          a.ack_at === null &&
+          (a.severity === "critical" || a.severity === "emergency")
       ).length,
     };
-  }, []);
+  }, [alerts]);
 
   return (
     <div className="space-y-3">
@@ -189,7 +132,7 @@ export function AlertsScreen() {
             { value: "emergency", label: "Emergency" },
           ]}
           value={severityFilter}
-          onChange={(v) => setSeverityFilter(v as Severity | "all")}
+          onChange={(v) => setSeverityFilter(v as AlertSeverity | "all")}
         />
         <span className="h-5 w-px bg-white/10" />
         <FilterPills
@@ -205,17 +148,23 @@ export function AlertsScreen() {
 
       {/* Alerts list */}
       <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="text-sm text-slate-500">Cargando alertas…</span>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <span className="text-3xl text-slate-700">○</span>
             <p className="mt-2 text-sm text-slate-500">
-              No hay alertas con estos filtros
+              {alerts.length === 0
+                ? "No hay alertas para este equipo"
+                : "No hay alertas con estos filtros"}
             </p>
           </div>
         ) : (
           <ul>
             {filtered.map((alert) => (
-              <AlertRow key={alert.id} alert={alert} />
+              <AlertRow key={alert.id} alert={alert} onAck={acknowledge} />
             ))}
           </ul>
         )}
@@ -290,11 +239,19 @@ function FilterPills<T extends string>({
   );
 }
 
-function AlertRow({ alert }: { alert: Alert }) {
+function AlertRow({
+  alert,
+  onAck,
+}: {
+  alert: AlertRecord;
+  onAck: (id: number) => void;
+}) {
   const cfg = SEVERITY_CONFIG[alert.severity];
+  const acknowledged = alert.ack_at !== null;
+  const detail = renderDetail(alert.detail);
   return (
     <li
-      className={`group border-b border-white/5 px-4 py-3 transition-colors last:border-b-0 ${alert.acknowledged ? "" : "hover:bg-white/[0.03]"}`}
+      className={`group border-b border-white/5 px-4 py-3 transition-colors last:border-b-0 ${acknowledged ? "" : "hover:bg-white/[0.03]"}`}
     >
       <div className="flex items-start gap-3">
         {/* Severity badge */}
@@ -316,29 +273,33 @@ function AlertRow({ alert }: { alert: Alert }) {
               {alert.source}
             </span>
             <span className="ml-auto font-mono text-[10px] text-slate-500">
-              {alert.timestamp}
+              {formatTs(alert.device_ts)}
             </span>
           </div>
           <h3 className="mt-0.5 text-sm font-semibold text-slate-100">
             {alert.title}
           </h3>
-          {alert.detail && (
+          {detail && (
             <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
-              {alert.detail}
+              {detail}
             </p>
           )}
-          {alert.acknowledged && (
+          {acknowledged && (
             <div className="mt-1.5 text-[10px] text-slate-500">
-              ✓ Reconocida por{" "}
-              <span className="text-slate-400">{alert.ackBy}</span> el{" "}
-              <span className="font-mono text-slate-400">{alert.ackAt}</span>
+              ✓ Reconocida el{" "}
+              <span className="font-mono text-slate-400">
+                {formatTs(alert.ack_at as string)}
+              </span>
             </div>
           )}
         </div>
 
         {/* Acknowledge button */}
-        {!alert.acknowledged && (
-          <button className="flex-shrink-0 rounded-md border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:border-amber-400/40 hover:bg-amber-500/15 hover:text-amber-200">
+        {!acknowledged && (
+          <button
+            onClick={() => onAck(alert.id)}
+            className="flex-shrink-0 rounded-md border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:border-amber-400/40 hover:bg-amber-500/15 hover:text-amber-200"
+          >
             Reconocer
           </button>
         )}
