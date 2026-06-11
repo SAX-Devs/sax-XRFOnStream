@@ -106,12 +106,14 @@ export async function POST(
       payload
     );
   } catch (e) {
-    // TEMP diagnostic: surface the underlying publish error so we can see why
-    // EMQX rejects/fails. Revert `detail` to a generic message once resolved.
-    const detail = e instanceof Error ? e.message : String(e);
-    console.error("[commands] publish failed:", detail);
+    // Log the underlying error server-side for diagnosis, but don't leak it to
+    // the client.
+    console.error(
+      "[commands] publish failed:",
+      e instanceof Error ? e.message : String(e)
+    );
     return NextResponse.json(
-      { error: "Failed to publish command", detail },
+      { error: "Failed to publish command" },
       { status: 502 }
     );
   }
