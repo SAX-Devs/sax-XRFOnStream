@@ -32,6 +32,9 @@ export async function publishToMqtt(
   });
 
   if (!response.ok) {
-    throw new Error(`EMQX publish failed: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `EMQX publish failed: ${response.status} ${body.slice(0, 200)}`
+    );
   }
 }

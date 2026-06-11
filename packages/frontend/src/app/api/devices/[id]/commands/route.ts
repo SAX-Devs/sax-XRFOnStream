@@ -105,9 +105,13 @@ export async function POST(
       `sax/${device.tenant_id}/${deviceId}/command/request`,
       payload
     );
-  } catch {
+  } catch (e) {
+    // TEMP diagnostic: surface the underlying publish error so we can see why
+    // EMQX rejects/fails. Revert `detail` to a generic message once resolved.
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("[commands] publish failed:", detail);
     return NextResponse.json(
-      { error: "Failed to publish command" },
+      { error: "Failed to publish command", detail },
       { status: 502 }
     );
   }
