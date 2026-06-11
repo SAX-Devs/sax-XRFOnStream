@@ -8,10 +8,8 @@ import type { UserProfile, UserRole } from "@/types/auth";
  * Returns the current user profile from the Supabase session,
  * or null if not authenticated.
  *
- * tenant_id / role live in user_metadata (set during invite). See the
- * note in services/users.ts for why this is a deliberate trade-off.
- * app_metadata is checked first as a forward-compatibility fallback for
- * users we may have provisioned via admin API in the future.
+ * tenant_id / role come from the protected `user_profiles` table (migration
+ * 00013). RLS lets the user read only their own row.
  */
 export async function getCurrentUser(): Promise<UserProfile | null> {
   const supabase = await createClient();
@@ -21,20 +19,17 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
 
   if (!user) return null;
 
-  const tenantId =
-    (user.app_metadata?.tenant_id as string | undefined) ??
-    (user.user_metadata?.tenant_id as string | undefined) ??
-    "";
-  const role =
-    (user.app_metadata?.role as UserRole | undefined) ??
-    (user.user_metadata?.role as UserRole | undefined) ??
-    "viewer";
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("tenant_id, role")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   return {
     id: user.id,
     email: user.email ?? "",
-    tenantId,
-    role,
+    tenantId: profile?.tenant_id ?? "",
+    role: (profile?.role as UserRole) ?? "viewer",
   };
 }
 

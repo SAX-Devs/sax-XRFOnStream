@@ -5,7 +5,7 @@
  *   npx supabase gen types typescript --project-id ndnijhnpfzxanadtfflb > src/types/database.ts
  *
  * For now, these manual types match the schema defined in
- * supabase/migrations/00001–00011.
+ * supabase/migrations/00001–00013.
  */
 
 export type DeviceStatusEnum =
@@ -59,6 +59,25 @@ export interface Database {
         Update: {
           name?: string;
           slug?: string;
+        };
+        Relationships: [];
+      };
+      user_profiles: {
+        Row: {
+          user_id: string;
+          tenant_id: string | null;
+          role: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          tenant_id?: string | null;
+          role?: string;
+        };
+        Update: {
+          tenant_id?: string | null;
+          role?: string;
         };
         Relationships: [];
       };

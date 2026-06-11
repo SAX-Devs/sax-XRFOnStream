@@ -3,28 +3,24 @@ import type { UserListItem, InviteUserPayload } from "@/types/users";
 import type { UserRole } from "@/types/auth";
 
 /**
- * NOTE on tenant_id / role storage:
- *
- * For the demo we keep tenant_id and role in `user_metadata` (set via the
- * `data` field of inviteUserByEmail). This works out-of-the-box with the
- * Supabase invite-flow email and is consistent across getCurrentUser and
- * getTenantUsers.
- *
- * Limitation: user_metadata is editable by the user themselves via
- * `auth.updateUser({ data })`, so a malicious user could change their own
- * role / tenant. For PRODUCTION we should move these fields to a dedicated
- * `user_profiles` table protected by RLS (only service_role can write
- * tenant_id / role). Tracked as a follow-up.
- *
- * Avoid using `app_metadata` here — setting it via updateUserById right
- * after inviteUserByEmail invalidates the invite token, which breaks the
- * accept-invite flow ("session expired" on password set).
+ * tenant_id / role live in the protected `user_profiles` table (migration
+ * 00013): only service_role can write it and users may read only their own row,
+ * so a user cannot change their own role/tenant. The auth.users AFTER INSERT
+ * trigger creates a default 'viewer' profile; inviteUser upserts the real values
+ * via service_role. Never store role/tenant in user_metadata (user-editable).
  */
 
 export async function getTenantUsers(
   tenantId: string
 ): Promise<UserListItem[]> {
   const supabase = await createServiceClient();
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("user_profiles")
+    .select("user_id, role, created_at")
+    .eq("tenant_id", tenantId);
+
+  if (profilesError) throw profilesError;
 
   const {
     data: { users },
@@ -33,15 +29,18 @@ export async function getTenantUsers(
 
   if (error) throw error;
 
-  return (users ?? [])
-    .filter((user) => user.user_metadata?.tenant_id === tenantId)
-    .map((user) => ({
-      id: user.id,
-      email: user.email ?? "",
-      role: (user.user_metadata?.role as UserRole) ?? "viewer",
-      created_at: user.created_at,
-      last_sign_in_at: user.last_sign_in_at ?? null,
-    }));
+  const byId = new Map((users ?? []).map((u) => [u.id, u]));
+
+  return (profiles ?? []).map((p) => {
+    const u = byId.get(p.user_id);
+    return {
+      id: p.user_id,
+      email: u?.email ?? "",
+      role: (p.role as UserRole) ?? "viewer",
+      created_at: u?.created_at ?? p.created_at,
+      last_sign_in_at: u?.last_sign_in_at ?? null,
+    };
+  });
 }
 
 export async function inviteUser(
@@ -58,10 +57,6 @@ export async function inviteUser(
     data: { user },
     error,
   } = await supabase.auth.admin.inviteUserByEmail(payload.email, {
-    data: {
-      tenant_id: payload.tenant_id,
-      role: payload.role,
-    },
     redirectTo,
   });
 
@@ -73,6 +68,18 @@ export async function inviteUser(
   }
 
   if (!user) throw new Error("No se pudo crear la invitacion");
+
+  // Write role/tenant to the protected profile. The AFTER INSERT trigger already
+  // created a default 'viewer' row; this upsert sets the real values.
+  const { error: profileError } = await supabase
+    .from("user_profiles")
+    .upsert({
+      user_id: user.id,
+      tenant_id: payload.tenant_id,
+      role: payload.role,
+    });
+
+  if (profileError) throw profileError;
 
   return { id: user.id, email: user.email ?? payload.email };
 }

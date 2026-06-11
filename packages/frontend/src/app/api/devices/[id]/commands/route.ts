@@ -26,7 +26,14 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = (user.app_metadata?.role as UserRole) ?? "viewer";
+  // Role + tenant come from the protected user_profiles table (RLS: own row).
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("tenant_id, role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const role = (profile?.role as UserRole) ?? "viewer";
   if (!hasMinimumRole(role, "operator")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -45,7 +52,7 @@ export async function POST(
     );
   }
 
-  const tenantId = (user.app_metadata?.tenant_id as string) ?? "";
+  const tenantId = profile?.tenant_id ?? "";
   const serviceClient = await createServiceClient();
 
   // Verify device exists and belongs to user's tenant (sax_admin skips tenant check)

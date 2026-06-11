@@ -8,7 +8,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Always refresh the Supabase session (keeps the token alive)
-  const { supabaseResponse, user } = await updateSession(request);
+  const { supabaseResponse, user, supabase } = await updateSession(request);
 
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -26,9 +26,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(ROUTES.DEVICES, request.url));
   }
 
-  // Admin routes require admin role (sax_admin or tenant_admin)
+  // Admin routes require admin role (sax_admin or tenant_admin). Role comes from
+  // the protected user_profiles table (RLS lets the user read their own row).
   if (user && pathname.startsWith("/admin")) {
-    const role = (user.app_metadata?.role as UserRole) ?? "viewer";
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const role = (profile?.role as UserRole) ?? "viewer";
     if (!ADMIN_ROLES.includes(role)) {
       return NextResponse.redirect(new URL(ROUTES.DEVICES, request.url));
     }
