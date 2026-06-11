@@ -1,8 +1,27 @@
 "use client";
 
 import { ScadaScreen } from "@/components/scada/scada-screen";
+import { useTelemetry } from "@/hooks/use-telemetry";
+
+/** Format a numeric telemetry field, falling back to em-dash while loading/absent. */
+function n(v: number | undefined, digits = 1, unit = ""): string {
+  if (typeof v !== "number") return "—";
+  const s = v.toFixed(digits);
+  return unit ? `${s} ${unit}` : s;
+}
+
+/** Format a boolean fault/flag as an OK/fault word. */
+function flag(v: boolean | undefined, ok: string, bad: string): string {
+  if (typeof v !== "boolean") return "—";
+  return v ? bad : ok;
+}
 
 export function ServiceScreen({ deviceId }: { deviceId: string }) {
+  // Service-only diagnostics read the raw module telemetry directly.
+  const gen = useTelemetry(deviceId, "generator").data;
+  const det = useTelemetry(deviceId, "detector").data;
+  const aux = useTelemetry(deviceId, "auxiliary").data;
+
   return (
     <div className="space-y-3">
       {/* Service mode banner */}
@@ -42,31 +61,31 @@ export function ServiceScreen({ deviceId }: { deviceId: string }) {
         <DiagnosticCard
           title="Generador Rx"
           rows={[
-            ["HV ramp time", "300 ms"],
-            ["Filament limit", "1.8 A"],
-            ["Filament preheat", "0.6 A"],
-            ["Interlock", "OK"],
-            ["Overvoltage", "OK"],
+            ["HV ramp time", n(gen?.ramp_time_ms, 0, "ms")],
+            ["Filament I", n(gen?.filament_current_ma, 0, "mA")],
+            ["SiC temp", n(gen?.sic_temperature_c, 1, "°C")],
+            ["Interlock", flag(gen?.interlock_open, "OK", "ABIERTO")],
+            ["Overvoltage", flag(gen?.overvoltage_fault, "OK", "FALLA")],
           ]}
         />
         <DiagnosticCard
           title="Detector"
           rows={[
-            ["MCA length", "8192"],
-            ["Gain", "0.98"],
-            ["Bin width", "0.01 keV"],
-            ["Gain trim", "0.0042"],
-            ["Temp", "−25.4 °C"],
+            ["MCA length", n(det?.mca_length, 0)],
+            ["Gain", n(det?.gain, 2)],
+            ["Bin width", n(det?.mca_bin_width, 2)],
+            ["Gain trim", n(det?.gain_trim, 2)],
+            ["Temp", n(det?.temperature, 1, "°C")],
           ]}
         />
         <DiagnosticCard
           title="Auxiliar"
           rows={[
-            ["Bat voltage", "26.8 V"],
-            ["Bat fail", "false"],
-            ["DC OK", "true"],
-            ["Tank pressure (high)", "OK"],
-            ["Tank pressure (low)", "OK"],
+            ["Bat voltage", n(aux?.bat_vol, 1, "V")],
+            ["Bat fail", flag(aux?.bat_fail, "no", "SÍ")],
+            ["DC OK", flag(aux?.dc_ok, "FALLA", "OK")],
+            ["Tank pressure (high)", flag(aux?.tank_pressure_high, "OK", "ALTA")],
+            ["Tank pressure (low)", flag(aux?.tank_pressure_low, "OK", "BAJA")],
           ]}
         />
       </div>
