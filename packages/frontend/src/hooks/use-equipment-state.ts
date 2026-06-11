@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { EquipmentStateEnum } from "@/types/database";
 
@@ -12,6 +12,7 @@ interface EquipmentState {
 }
 
 export function useEquipmentState(deviceId: string): EquipmentState {
+  const channelId = useId();
   const [equipState, setEquipState] = useState<EquipmentState>({
     state: null,
     detail: null,
@@ -44,7 +45,7 @@ export function useEquipmentState(deviceId: string): EquipmentState {
     fetchState();
 
     const channel = supabase
-      .channel(`equipment_state:${deviceId}`)
+      .channel(`equipment_state:${deviceId}:${channelId}`)
       .on(
         "postgres_changes",
         {
@@ -72,7 +73,7 @@ export function useEquipmentState(deviceId: string): EquipmentState {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [deviceId]);
+  }, [deviceId, channelId]);
 
   return equipState;
 }

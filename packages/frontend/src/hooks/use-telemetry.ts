@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { ModuleDataMap, ModuleName } from "@/types/telemetry";
 
@@ -14,6 +14,9 @@ export function useTelemetry<M extends ModuleName>(
   deviceId: string,
   module: M
 ): TelemetryState<ModuleDataMap[M]> {
+  // Unique per hook instance so two subscriptions to the same module (e.g. the
+  // SCADA composite hook + a service diagnostic card) don't collide on channel name.
+  const channelId = useId();
   const [state, setState] = useState<TelemetryState<ModuleDataMap[M]>>({
     data: null,
     loading: true,
@@ -49,7 +52,7 @@ export function useTelemetry<M extends ModuleName>(
     // Realtime: filter by device_id only; module check happens in callback
     // because Supabase Realtime postgres_changes doesn't support compound filters
     const channel = supabase
-      .channel(`telemetry:${deviceId}:${module}`)
+      .channel(`telemetry:${deviceId}:${module}:${channelId}`)
       .on(
         "postgres_changes",
         {
@@ -78,7 +81,7 @@ export function useTelemetry<M extends ModuleName>(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [deviceId, module]);
+  }, [deviceId, module, channelId]);
 
   return state;
 }

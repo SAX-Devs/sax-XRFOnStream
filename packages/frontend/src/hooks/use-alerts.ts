@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useId } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export type AlertSeverity = "info" | "warning" | "critical" | "emergency";
@@ -26,6 +26,7 @@ const SELECT = "id, severity, source, title, detail, ack_by, ack_at, device_ts";
  * tenant's users.
  */
 export function useAlerts(deviceId: string) {
+  const channelId = useId();
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +50,7 @@ export function useAlerts(deviceId: string) {
     fetchAlerts();
 
     const channel = supabase
-      .channel(`alerts:${deviceId}`)
+      .channel(`alerts:${deviceId}:${channelId}`)
       .on(
         "postgres_changes",
         {
@@ -80,7 +81,7 @@ export function useAlerts(deviceId: string) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [deviceId]);
+  }, [deviceId, channelId]);
 
   const acknowledge = useCallback(async (id: number) => {
     const supabase = createClient();
