@@ -41,5 +41,9 @@ Thumbs.db
 *.password
 provision.json
 
+# Generated provision packages (contain device secrets)
+/provisioning/
+*.tar.gz
+
 # Internal docs — never push
 /docs/PRESENTACION_JEFE.md

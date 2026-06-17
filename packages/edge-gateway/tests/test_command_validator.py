@@ -45,7 +45,8 @@ def _make_valid_command(**overrides) -> CommandPayload:
 @pytest.fixture
 def validator(mock_gateway_config, mock_db_reader):
     with patch("src.command_validator.Path") as mock_path:
-        mock_path.return_value.read_bytes.return_value = HMAC_SECRET
+        # The key file is hex-encoded text; the validator decodes it to raw bytes.
+        mock_path.return_value.read_text.return_value = HMAC_SECRET.hex()
         v = CommandValidator(mock_gateway_config, mock_db_reader)
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},

@@ -94,7 +94,11 @@ class CommandValidator:
     def __init__(self, config: GatewayConfig, db_reader: DbReader) -> None:
         self._config = config
         self._db = db_reader
-        self._hmac_secret = Path(config.hmac_secret_path).read_bytes().strip()
+        # The HMAC key is stored hex-encoded (text) and shared with the cloud
+        # Route Handler, which signs with the same raw bytes (Buffer.from(hex)).
+        self._hmac_secret = bytes.fromhex(
+            Path(config.hmac_secret_path).read_text().strip()
+        )
         self._seen_command_ids: set[str] = set()
         self._last_command_times: dict[tuple[str, str], float] = {}
 
