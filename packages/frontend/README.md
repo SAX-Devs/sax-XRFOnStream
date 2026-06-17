@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend — SAX XrfOnStream
 
-## Getting Started
+Dashboard web de la plataforma IoT para los analizadores XRF on-stream de SAX.
+Monitoreo y control remoto de equipos en planta.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind 4 ·
+`@supabase/ssr` · Recharts · Realtime de Supabase.
+
+## Desarrollo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # build de producción
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Variables de entorno (`.env.local`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=        # server-side (Route Handler de comandos)
+EMQX_HTTP_API_URL=                # https://...:8443  (base, sin /api/v5)
+EMQX_HTTP_API_KEY=
+EMQX_HTTP_API_SECRET=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> El envío de comandos publica a EMQX por su HTTP API (puerto 8443). En redes que
+> bloquean puertos no estándar, eso solo funciona desde un entorno con salida
+> abierta (p. ej. Vercel), no necesariamente desde localhost.
 
-## Learn More
+## Estructura
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                      rutas (App Router)
+│   ├── (auth)/               login, accept-invite
+│   ├── (dashboard)/          devices, admin, layout
+│   └── api/devices/[id]/commands/route.ts   envío de comandos (HMAC + EMQX)
+├── components/               scada, measurements, alerts, operator, service, admin
+├── hooks/                    useTelemetry, useEquipmentState, useAlerts,
+│                             useMeasurements, useCommands, useScadaTelemetry
+├── lib/                      supabase (client/server/middleware), hmac, emqx, auth
+├── services/                 tenants, users, devices
+└── types/                    database, telemetry, auth, ...
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Conceptos clave
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Datos en vivo:** los hooks (`use*`) hacen fetch inicial + suscripción Realtime
+  a Supabase. Los numéricos se coercionan (`Number()`) porque el equipo publica
+  Decimals como strings.
+- **Roles/tenant:** viven en la tabla protegida `user_profiles` (migración 00013),
+  no en `user_metadata`. RLS, middleware y el Route Handler leen de ahí.
+- **Comandos:** `POST /api/devices/[id]/commands` verifica rol → firma HMAC →
+  publica a EMQX → registra en `command_audit`. Requiere que el equipo esté
+  provisionado (`device_secrets`).
+- **Telemetría:** el campo `data` de `device_telemetry` refleja las columnas
+  `*_status` del equipo (ver `src/types/telemetry.ts`, punto de integración INT-2).
 
-## Deploy on Vercel
+## Documentación relacionada
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Manual de usuario: [`../../docs/MANUAL_USUARIO.md`](../../docs/MANUAL_USUARIO.md)
+- Onboarding de equipos: [`../../docs/onboarding/provisionar-equipo.md`](../../docs/onboarding/provisionar-equipo.md)
+- Runbook de operaciones: [`../../docs/runbook/operaciones.md`](../../docs/runbook/operaciones.md)
