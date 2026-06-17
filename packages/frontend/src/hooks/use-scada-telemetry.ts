@@ -34,6 +34,16 @@ function armMode(position: string | undefined): "NORMAL" | "RECAL" {
 }
 
 /**
+ * Coerce a telemetry value to a number. The equipment publishes NUMERIC columns
+ * as JSON strings (psycopg Decimal → json default=str), so fields may arrive as
+ * "0.97" rather than 0.97. Falls back to 0 for null/NaN.
+ */
+function num(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
  * Composes the seven module telemetry streams + equipment state into the two
  * shapes the SCADA screen renders: the diagram visual state and the parameters
  * panel. All mapping/polarity/normalization decisions live here so the visual
@@ -69,11 +79,11 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
     // The diagram's "Outlet Valve" sits on the chamber drain.
     outletValve: c?.out_valve ?? false,
     pumpState: normPumpState(c?.pump_state),
-    flowRate: c?.flow_rate_in ?? 0,
-    flowRateOut: c?.flow_rate_out ?? 0,
+    flowRate: num(c?.flow_rate_in),
+    flowRateOut: num(c?.flow_rate_out),
     pressureOk: c?.pressure_ok ?? true,
     tankLevelOk: c?.tank_level_ok ?? true,
-    tankPercentLevel: c?.tank_percentage_level ?? 0,
+    tankPercentLevel: num(c?.tank_percentage_level),
     // Interchanger / chamber interlocks
     interchangerMode: armMode(i?.current_position),
     chamberLocked: i?.chamber_lock ?? false,
@@ -88,14 +98,14 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
   const params: ScadaParams = {
     operationMode: c?.operation_state ?? "—",
     pumpState: c?.pump_state ?? "—",
-    flowIn: c?.flow_rate_in ?? 0,
-    flowOut: c?.flow_rate_out ?? 0,
+    flowIn: num(c?.flow_rate_in),
+    flowOut: num(c?.flow_rate_out),
     atmosphericStatus: v?.atmospheric_status ?? "—",
-    vacuumSensor: v?.vacuum_sensor ?? 0,
-    cabinetTemp: tp?.cabinet_temperature ?? 0,
-    tubeTemp: tp?.tube_temperature ?? 0,
-    tubeHighVoltage: g?.tube_high_voltage_kv ?? 0,
-    beamCurrent: g?.beam_current_ua ?? 0,
+    vacuumSensor: num(v?.vacuum_sensor),
+    cabinetTemp: num(tp?.cabinet_temperature),
+    tubeTemp: num(tp?.tube_temperature),
+    tubeHighVoltage: num(g?.tube_high_voltage_kv),
+    beamCurrent: num(g?.beam_current_ua),
     // Raw equipment value, shown as-is (e.g. "Chamber").
     interchangerPosition: i?.current_position ?? "—",
     chamberLock: i?.chamber_lock ? "LOCKED" : "UNLOCKED",

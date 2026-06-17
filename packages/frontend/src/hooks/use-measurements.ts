@@ -43,11 +43,18 @@ function formatTs(iso: string): string {
   });
 }
 
-/** Read the first numeric value among candidate keys (tolerant to schema naming). */
+/**
+ * Read the first numeric value among candidate keys (tolerant to schema naming
+ * AND to numbers arriving as strings — the equipment publishes Decimal columns
+ * as JSON strings).
+ */
 function runField(run: Record<string, unknown> | null, ...keys: string[]): number {
   if (!run) return 0;
   for (const k of keys) {
-    if (typeof run[k] === "number") return run[k] as number;
+    const raw = run[k];
+    if (raw === undefined || raw === null) continue;
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
   }
   return 0;
 }
@@ -123,7 +130,13 @@ export function useMeasurements(deviceId: string) {
       const concByMeasurement: Record<string, Record<string, number>> = {};
       for (const c of conc) {
         if (c.measurement_id && !concByMeasurement[c.measurement_id]) {
-          concByMeasurement[c.measurement_id] = c.elements ?? {};
+          // Coerce element values to numbers (they may arrive as strings).
+          const coerced: Record<string, number> = {};
+          for (const [el, val] of Object.entries(c.elements ?? {})) {
+            const n = Number(val);
+            if (Number.isFinite(n)) coerced[el] = n;
+          }
+          concByMeasurement[c.measurement_id] = coerced;
         }
       }
 
