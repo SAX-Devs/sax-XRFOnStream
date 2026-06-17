@@ -108,7 +108,13 @@ interface Feedback {
   msg: string;
 }
 
-export function OperatorScreen({ deviceId }: { deviceId: string }) {
+export function OperatorScreen({
+  deviceId,
+  provisioned,
+}: {
+  deviceId: string;
+  provisioned: boolean;
+}) {
   const equip = useEquipmentState(deviceId);
   const { commands, loading, sending, sendCommand, pendingCount } =
     useCommands(deviceId);
@@ -122,7 +128,17 @@ export function OperatorScreen({ deviceId }: { deviceId: string }) {
       : "unknown";
   const stateConfig = STATE_CONFIG[stateKey];
 
+  // Commands require a provisioned device (it must have an HMAC secret to sign).
+  const commandsDisabled = sending || !provisioned;
+
   async function run(module: string, command: string) {
+    if (!provisioned) {
+      setFeedback({
+        ok: false,
+        msg: "Equipo no provisionado — los comandos no están disponibles.",
+      });
+      return;
+    }
     const res = await sendCommand(module, command);
     setFeedback(
       res.ok
@@ -133,6 +149,16 @@ export function OperatorScreen({ deviceId }: { deviceId: string }) {
 
   return (
     <div className="space-y-3">
+      {!provisioned && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200 backdrop-blur-md">
+          <span className="font-semibold">Equipo no provisionado.</span>
+          <span className="text-amber-200/80">
+            Los comandos están deshabilitados hasta completar la provisión del
+            equipo.
+          </span>
+        </div>
+      )}
+
       {feedback && (
         <div
           className={`flex items-center justify-between rounded-xl border px-4 py-2.5 text-sm backdrop-blur-md ${
@@ -187,7 +213,7 @@ export function OperatorScreen({ deviceId }: { deviceId: string }) {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setShowStartConfirm(true)}
-                disabled={stateKey === "measuring" || sending}
+                disabled={stateKey === "measuring" || commandsDisabled}
                 className="group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-emerald-500/40 bg-gradient-to-b from-emerald-600/30 to-emerald-700/30 px-4 py-6 transition-all hover:border-emerald-400/70 hover:from-emerald-500/40 hover:to-emerald-600/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:shadow-none"
               >
                 <svg
@@ -211,7 +237,7 @@ export function OperatorScreen({ deviceId }: { deviceId: string }) {
 
               <button
                 onClick={() => run("system", "emergency_stop")}
-                disabled={sending}
+                disabled={commandsDisabled}
                 className="group relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-red-500/50 bg-gradient-to-b from-red-600 to-red-800 px-4 py-6 shadow-md shadow-red-900/30 transition-all hover:border-red-400 hover:from-red-500 hover:to-red-700 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg className="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -229,19 +255,19 @@ export function OperatorScreen({ deviceId }: { deviceId: string }) {
               <SecondaryActionButton
                 label="Inicializar"
                 command="initialize"
-                disabled={sending}
+                disabled={commandsDisabled}
                 onClick={() => run("system", "initialize")}
               />
               <SecondaryActionButton
                 label="Pausar"
                 command="pause"
-                disabled={sending}
+                disabled={commandsDisabled}
                 onClick={() => run("system", "pause")}
               />
               <SecondaryActionButton
                 label="Recalibrar"
                 command="recalibrate"
-                disabled={sending}
+                disabled={commandsDisabled}
                 onClick={() => run("interchanger", "recalibrate")}
               />
             </div>

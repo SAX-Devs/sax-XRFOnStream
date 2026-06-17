@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Tenant, TenantWithCounts } from "@/types/tenants";
 import type { Device } from "@/types/devices";
@@ -26,14 +27,15 @@ export async function getTenants(): Promise<TenantWithCounts[]> {
     deviceCountMap.set(tid, (deviceCountMap.get(tid) ?? 0) + 1);
   }
 
-  // Get user counts per tenant via Admin API
-  const {
-    data: { users },
-  } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  // Get user counts per tenant from user_profiles (the source of truth for
+  // tenant membership since migration 00013).
+  const { data: profiles } = await supabase
+    .from("user_profiles")
+    .select("tenant_id");
 
   const userCountMap = new Map<string, number>();
-  for (const user of users ?? []) {
-    const tid = user.app_metadata?.tenant_id as string | undefined;
+  for (const profile of profiles ?? []) {
+    const tid = profile.tenant_id;
     if (tid) {
       userCountMap.set(tid, (userCountMap.get(tid) ?? 0) + 1);
     }
@@ -104,8 +106,14 @@ export async function createTenant(input: {
 }
 
 /**
- * Creates a new device under a tenant.
- * Sets initial status to pending_activation.
+ * Creates a new device under a tenant and provisions its secret.
+ *
+ * Provisioning generates the device's HMAC secret + MQTT credentials and stores
+ * them in private.device_secrets via the upsert_device_secret RPC (00014), which
+ * also stamps devices.provisioned_at. This makes the device immediately able to
+ * receive signed commands; the same credentials are later read by the provision
+ * package that's installed on the physical equipment. Initial status stays
+ * pending_activation until the equipment actually connects.
  */
 export async function createDevice(input: {
   serial: string;
@@ -132,5 +140,28 @@ export async function createDevice(input: {
     throw error;
   }
 
-  return data as Device;
+  const device = data as Device;
+
+  // Provision: generate + store the HMAC secret and MQTT credentials.
+  const hmacSecretHex = randomBytes(32).toString("hex");
+  const mqttUsername = input.serial.toLowerCase();
+  const mqttPassword = randomBytes(18).toString("base64url");
+
+  // Cast around the RPC: it isn't in the generated Database types (same as
+  // get_device_hmac_secret in the command Route Handler).
+  const { error: provisionError } = await (
+    supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: Error | null }>
+  )("upsert_device_secret", {
+    p_device_id: device.id,
+    p_hmac_secret_hex: hmacSecretHex,
+    p_mqtt_username: mqttUsername,
+    p_mqtt_password: mqttPassword,
+  });
+
+  if (provisionError) throw provisionError;
+
+  return device;
 }
