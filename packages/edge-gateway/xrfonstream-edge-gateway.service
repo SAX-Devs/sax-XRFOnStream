@@ -16,5 +16,16 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=sax-edge-gateway
 
+# Sandboxing — the gateway only needs to read /etc/sax (config/secrets) and
+# write /var/lib/sax (spectra cursor). StateDirectory creates + owns the latter.
+StateDirectory=sax
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
 [Install]
 WantedBy=multi-user.target
