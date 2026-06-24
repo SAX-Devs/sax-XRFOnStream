@@ -5,6 +5,7 @@ import { ROLE_LABELS } from "@/constants/roles";
 import { Modal } from "@/components/ui/modal";
 import { CreateDeviceForm } from "@/components/admin/create-device-form";
 import { InviteUserForm } from "@/components/admin/invite-user-form";
+import { DeleteDeviceButton } from "@/components/admin/delete-device-button";
 import type { Device } from "@/types/devices";
 import type { UserListItem } from "@/types/users";
 import type { DeviceStatusEnum } from "@/types/database";
@@ -70,6 +71,7 @@ export function TenantDetailActions({
                     <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                       Ultimo contacto
                     </th>
+                    <th className="w-12 px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -95,6 +97,13 @@ export function TenantDetailActions({
                           {device.last_seen_at
                             ? formatDate(device.last_seen_at)
                             : "Nunca"}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <DeleteDeviceButton
+                            deviceId={device.id}
+                            serial={device.serial}
+                            label={device.label}
+                          />
                         </td>
                       </tr>
                     );

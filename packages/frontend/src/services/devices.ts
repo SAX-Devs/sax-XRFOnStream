@@ -6,7 +6,7 @@ export async function getDevices(): Promise<DeviceWithState[]> {
 
   const { data, error } = await supabase
     .from("devices")
-    .select("*, device_equipment_state(state, detail, device_ts)")
+    .select("*, device_equipment_state(state, detail, device_ts), tenants(name)")
     .order("created_at", { ascending: true });
 
   if (error) throw error;

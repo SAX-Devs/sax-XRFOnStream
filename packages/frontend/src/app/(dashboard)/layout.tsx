@@ -15,7 +15,12 @@ export default async function DashboardLayout({
     redirect(ROUTES.LOGIN);
   }
 
-  const tenant = user.tenantId ? await getTenant(user.tenantId) : null;
+  // sax_admin is a global account (sees every tenant), so it has no single
+  // tenant to display in the nav. Only resolve a tenant name for scoped users.
+  const tenant =
+    user.role !== "sax_admin" && user.tenantId
+      ? await getTenant(user.tenantId)
+      : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0a0a12]">

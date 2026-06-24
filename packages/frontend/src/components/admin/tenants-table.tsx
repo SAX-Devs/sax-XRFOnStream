@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ROUTES } from "@/constants/routes";
+import { DeleteTenantButton } from "./delete-tenant-button";
 import type { TenantWithCounts } from "@/types/tenants";
 
 interface TenantsTableProps {
@@ -27,6 +28,7 @@ export function TenantsTable({ tenants }: TenantsTableProps) {
             <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
               Creado
             </th>
+            <th className="w-12 px-5 py-3" />
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
@@ -60,6 +62,14 @@ export function TenantsTable({ tenants }: TenantsTableProps) {
               </td>
               <td className="px-5 py-4 text-right text-sm text-gray-500">
                 {formatDate(tenant.created_at)}
+              </td>
+              <td className="px-5 py-4 text-right">
+                <DeleteTenantButton
+                  tenantId={tenant.id}
+                  tenantName={tenant.name}
+                  deviceCount={tenant.device_count}
+                  userCount={tenant.user_count}
+                />
               </td>
             </tr>
           ))}

@@ -5,6 +5,7 @@ import { getTenant, getTenantDevices } from "@/services/tenants";
 import { getTenantUsers } from "@/services/users";
 import { ROUTES } from "@/constants/routes";
 import { TenantDetailActions } from "./tenant-detail-actions";
+import { EditTenantButton } from "@/components/admin/edit-tenant-button";
 
 interface TenantDetailPageProps {
   params: Promise<{ id: string }>;
@@ -42,7 +43,16 @@ export default async function TenantDetailPage({
             Volver a Tenants
           </Link>
         )}
-        <h1 className="text-2xl font-semibold text-white">{tenant.name}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-white">{tenant.name}</h1>
+          {user.role === "sax_admin" && (
+            <EditTenantButton
+              tenantId={tenant.id}
+              currentName={tenant.name}
+              currentSlug={tenant.slug}
+            />
+          )}
+        </div>
         <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
           <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-xs">
             {tenant.slug}

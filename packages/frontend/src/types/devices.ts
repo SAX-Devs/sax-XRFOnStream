@@ -8,6 +8,7 @@ export type DeviceWithState = Device & {
     detail: Record<string, unknown> | null;
     device_ts: string;
   } | null;
+  tenants: { name: string } | null;
 };
 
 export function isDeviceOnline(lastSeenAt: string | null): boolean {

@@ -65,6 +65,71 @@ export async function getTenant(id: string): Promise<Tenant | null> {
 }
 
 /**
+ * Updates an existing tenant's name and slug. The slug is only a display/unique
+ * key here (routes and provisioning key off the UUID id), so it's safe to change
+ * as long as it stays unique — the DB enforces that and we surface 23505.
+ */
+export async function updateTenant(
+  id: string,
+  input: { name: string; slug: string }
+): Promise<Tenant> {
+  const supabase = await createServiceClient();
+
+  const { data, error } = await supabase
+    .from("tenants")
+    .update({ name: input.name, slug: input.slug })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Ya existe un tenant con ese slug");
+    }
+    throw error;
+  }
+  return data as Tenant;
+}
+
+/**
+ * Permanently deletes a tenant.
+ *
+ * The devices FK is ON DELETE RESTRICT (migration 00002), so Postgres refuses to
+ * delete a tenant that still owns equipment — we surface that as a friendly error.
+ * user_profiles is ON DELETE SET NULL, so member accounts survive but lose their
+ * tenant association. Telemetry/alerts/etc. cascade off the devices, not here.
+ */
+export async function deleteTenant(id: string): Promise<void> {
+  const supabase = await createServiceClient();
+
+  const { error } = await supabase.from("tenants").delete().eq("id", id);
+
+  if (error) {
+    if (error.code === "23503") {
+      throw new Error(
+        "No se puede eliminar: el tenant todavia tiene equipos asociados. Elimina o reasigna los equipos primero."
+      );
+    }
+    throw error;
+  }
+}
+
+/**
+ * Permanently deletes a device.
+ *
+ * Every child table (telemetry, spectra, command_audit, alerts, device_secrets,
+ * equipment_state, concentrations) is ON DELETE CASCADE on device_id, so this also
+ * wipes all of the device's history — hence the typed confirmation in the UI.
+ */
+export async function deleteDevice(id: string): Promise<void> {
+  const supabase = await createServiceClient();
+
+  const { error } = await supabase.from("devices").delete().eq("id", id);
+
+  if (error) throw error;
+}
+
+/**
  * Fetches all devices belonging to a tenant.
  */
 export async function getTenantDevices(tenantId: string): Promise<Device[]> {

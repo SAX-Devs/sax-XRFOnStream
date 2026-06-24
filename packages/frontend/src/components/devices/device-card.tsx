@@ -20,6 +20,11 @@ export function DeviceCard({ device }: DeviceCardProps) {
     >
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
+          {device.tenants?.name && (
+            <p className="mb-1 truncate text-[11px] font-medium uppercase tracking-wider text-gray-600">
+              {device.tenants.name}
+            </p>
+          )}
           <h3 className="truncate text-base font-semibold text-gray-100 group-hover:text-white">
             {device.label ?? device.serial}
           </h3>
