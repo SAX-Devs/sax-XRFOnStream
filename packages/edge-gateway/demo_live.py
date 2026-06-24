@@ -33,54 +33,48 @@ TENANT_ID = os.environ.get("TENANT_ID", "")
 
 TOPIC_PREFIX = f"sax/{TENANT_ID}/{DEVICE_ID}"
 
-# Mock telemetry data for 7 modules
+# Mock telemetry for 7 modules — uses the REAL equipment *_status schema
+# (keep in sync with packages/frontend/src/types/telemetry.ts, INT-2).
 MOCK_TELEMETRY = {
     "generator": {
-        "tube_high_voltage_kv": 30.0,
-        "beam_current_ua": 100.0,
-        "hv_on": False,
-        "sic_temperature_c": 42.5,
-        "power_supply_on": True,
-        "ramp_enabled": False,
+        "hv_on": True, "power_supply_on": True, "interlock_open": False,
+        "interlock_fault": False, "overvoltage_fault": False, "overpower_fault": False,
+        "sic_temperature_c": 46.0, "tube_high_voltage_kv": 49.99, "beam_current_ua": 289.5,
+        "filament_current_ma": 2599.6, "hv_board_temperature_c": 42.5,
+        "ramp_enabled": False, "ramp_time_ms": 3000,
     },
     "vacuum": {
-        "vacuum_sensor": 0.85,
-        "atmospheric_status": False,
-        "chamber_liquid_sensor": False,
-        "vacuum_pump_1": True,
+        "outlet_valve": True, "vacuum_pump_1": True, "vacuum_pump_2": True,
+        "purge_valve": False, "inlet_valve": False, "vacuum_sensor": 0.97,
+        "atmospheric_status": "Vacuum", "filter": "None", "chamber_leak_ok": True,
     },
     "circulation": {
-        "operation_state": "ready",
-        "pump_state": True,
-        "flow_rate_in": 2.5,
-        "flow_rate_out": 2.4,
-        "high_pressure_sensor": False,
+        "operation_state": "Brine", "pump_state": "FORWARD", "flow_rate_in": 12.5,
+        "flow_rate_out": 12.4, "pressure_ok": True, "brine_in_valve": True,
+        "water_in_valve": False, "out_valve": True, "recirculation_in_valve": False,
+        "recirculation_out_valve": False, "pump_forward": True, "pump_reverse": False,
+        "power_state": True, "tank_fill_sensor": False, "tank_level_ok": True,
+        "tank_filled": False, "tank_percentage_level": 62, "bypass_valve": False,
+        "pick_up_switch": False,
     },
     "interchanger": {
-        "current_position": 1,
-        "service_position": False,
-        "chamber_lock": True,
+        "service_position": 0, "rot_up": True, "rot_down": False, "axial_up": False,
+        "axial_down": True, "current_position": "Chamber", "chamber_lock": True,
         "door_lock": True,
     },
     "detector": {
-        "mca_length": 2048,
-        "gain": 1.0,
-        "temperature": -25.3,
-        "d_on": True,
-        "threshold": 50,
+        "mca_length": 8192, "gain": 8.0, "mca_bin_width": 23.4, "gain_trim": 1,
+        "temperature": -25.4, "genset": 0, "parset": 0, "threshold": 50, "d_on": True,
     },
     "temp_control": {
-        "water_pressure": 1.2,
-        "flow_active": True,
+        "cabinet_temperature": 27.7, "radiator_temperature_1": 17.5,
+        "radiator_temperature_2": 17.6, "tube_temperature": 26.6,
+        "target_temperature": 30, "water_pressure": 0.63, "flow_active": True,
         "valve_open": True,
-        "temperature_in": 22.1,
-        "temperature_out": 24.8,
     },
     "auxiliary": {
-        "bat_vol": 24.1,
-        "bat_fail": False,
-        "bat_dis": False,
-        "dc_ok": True,
+        "bat_vol": 23.7, "bat_dis": False, "bat_fail": False, "dc_ok": True,
+        "tank_pressure_high": False, "tank_pressure_low": False,
     },
 }
 
