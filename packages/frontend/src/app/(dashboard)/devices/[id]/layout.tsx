@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth/session";
 import { DeviceTabs } from "@/components/layout/device-tabs";
 
 interface DeviceLayoutProps {
@@ -12,6 +13,7 @@ export default async function DeviceLayout({
   params,
 }: DeviceLayoutProps) {
   const { id } = await params;
+  const user = await requireAuth();
   const supabase = await createClient();
 
   const { data: device } = await supabase
@@ -35,7 +37,7 @@ export default async function DeviceLayout({
         </p>
       </div>
 
-      <DeviceTabs deviceId={id} />
+      <DeviceTabs deviceId={id} role={user.role} />
 
       <div className="flex-1 p-6">{children}</div>
     </div>

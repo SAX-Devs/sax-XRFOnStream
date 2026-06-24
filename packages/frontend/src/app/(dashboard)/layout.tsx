@@ -1,29 +1,29 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { ROUTES } from "@/constants/routes";
 import { TopNav } from "@/components/layout/top-nav";
-import type { UserRole } from "@/types/auth";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getTenant } from "@/services/tenants";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect(ROUTES.LOGIN);
   }
 
-  const email = user.email ?? "";
-  const role = (user.app_metadata?.role as UserRole) ?? "viewer";
+  const tenant = user.tenantId ? await getTenant(user.tenantId) : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0a0a12]">
-      <TopNav email={email} userRole={role} />
+      <TopNav
+        email={user.email}
+        userRole={user.role}
+        tenantName={tenant?.name ?? null}
+      />
 
       <main className="flex-1 px-6 py-6">
         <div className="mx-auto max-w-[1480px]">{children}</div>

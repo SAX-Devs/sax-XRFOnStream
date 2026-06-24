@@ -25,9 +25,10 @@ const ADMIN_ITEMS: NavItem[] = [
 interface TopNavProps {
   email: string;
   userRole: UserRole;
+  tenantName: string | null;
 }
 
-export function TopNav({ email, userRole }: TopNavProps) {
+export function TopNav({ email, userRole, tenantName }: TopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -57,7 +58,7 @@ export function TopNav({ email, userRole }: TopNavProps) {
   return (
     <nav className="sticky top-0 z-50 flex h-14 items-center border-b border-white/8 bg-[#111118]/80 px-6 backdrop-blur-xl">
       {/* Logo */}
-      <Link href={ROUTES.DEVICES} className="mr-8 flex-shrink-0">
+      <Link href={ROUTES.DEVICES} className="flex-shrink-0">
         <Image
           src="/sax-blanco.webp"
           alt="SAX"
@@ -67,6 +68,16 @@ export function TopNav({ email, userRole }: TopNavProps) {
           className="h-7 w-auto"
         />
       </Link>
+
+      {/* Tenant (empresa) */}
+      {tenantName && (
+        <div className="mr-8 ml-4 flex items-center gap-3 border-l border-white/10 pl-4">
+          <span className="text-sm font-semibold text-gray-200">
+            {tenantName}
+          </span>
+        </div>
+      )}
+      {!tenantName && <div className="mr-8" />}
 
       {/* Nav links */}
       <div className="flex items-center gap-1">
