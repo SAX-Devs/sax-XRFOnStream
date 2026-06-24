@@ -189,12 +189,38 @@ def main():
         "alerts": [
             {"name": "critical_flow", "severity": "OK", "message": "Flow normal"},
             {"name": "hermetic", "severity": "OK", "message": "Hermetic seal OK"},
-            {"name": "air_tank", "severity": "OK", "message": "Tank pressure normal"},
+            {"name": "air_tank", "severity": "WARNING", "message": "Tank pressure low"},
             {"name": "vacuum", "severity": "OK", "message": "Vacuum level OK"},
         ],
     }
     client.publish(f"{TOPIC_PREFIX}/sentinel", json.dumps(sentinel_payload).encode(), qos=1)
-    print(f"  >> SENT [sentinel] — 4 validations, all OK")
+    print(f"  >> SENT [sentinel] — 4 validations (1 WARNING)")
+
+    time.sleep(1)
+
+    # --- Publish a spectrum (lights up the Measurements screen) ---
+    print(f"\n{'-'*60}")
+    print("  PUBLISHING SPECTRUM")
+    print(f"{'-'*60}\n")
+
+    # Realistic-ish MCA spectrum: bremsstrahlung continuum + a few element peaks.
+    peaks = [(174, 1500), (369, 2800), (640, 4500), (805, 3200), (1055, 1800)]
+    spectrum = []
+    for ch in range(1400):
+        counts = int(80 + 220 * pow(2.718, -ch / 720))
+        for pc, amp in peaks:
+            counts += int(amp * pow(2.718, -((ch - pc) ** 2) / (2 * 81)))
+        spectrum.append(counts)
+
+    spectra_payload = {
+        "device_id": DEVICE_ID,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "measurement_id": f"RUN-DEMO-{int(time.time())}",
+        "spectra_data": {"spectrum": spectrum},
+        "run_data": {"livetime": 11.9, "runtime": 12.4, "triggers": 48000},
+    }
+    client.publish(f"{TOPIC_PREFIX}/spectra", json.dumps(spectra_payload).encode(), qos=1)
+    print(f"  >> SENT [spectra] — {len(spectrum)} channels")
 
     time.sleep(2)
 

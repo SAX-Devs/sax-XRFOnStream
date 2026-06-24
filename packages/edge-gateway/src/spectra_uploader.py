@@ -52,12 +52,25 @@ class SpectraUploader:
             return
 
         for row in rows:
+            # The equipment's `spectras` table holds the spectrum in the `spectrum`
+            # int[] column and the run metadata in separate columns — build the
+            # cloud payload from those. The frontend (toSpectrum / runField)
+            # consumes {spectrum:[...]} and these run_data keys.
+            spectrum = row.get("spectrum")
             payload = {
                 "device_id": self._config.device_id,
                 "ts": datetime.now(timezone.utc).isoformat(),
-                "measurement_id": str(row.get("id", "")),
-                "spectra_data": row.get("spectra_data") or row.get("data"),
-                "run_data": row.get("run_data"),
+                "measurement_id": str(row.get("sample_id") or row.get("id", "")),
+                "spectra_data": {"spectrum": spectrum} if spectrum is not None else None,
+                "run_data": {
+                    "livetime": row.get("livetime"),
+                    "runtime": row.get("runtime"),
+                    "triggers": row.get("triggers"),
+                    "events_in_run": row.get("events_in_run"),
+                    "input_count_rate": row.get("input_count_rate"),
+                    "output_count_rate": row.get("output_count_rate"),
+                    "sample_id": row.get("sample_id"),
+                },
             }
             self._mqtt.publish(self._topic, json.dumps(payload, default=str).encode())
             self._last_uploaded_id = max(self._last_uploaded_id, row["id"])
