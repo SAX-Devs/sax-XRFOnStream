@@ -126,8 +126,12 @@ Con rangos validados (ej. `set_voltage_and_current`: voltaje 0–50 kV, corrient
 
 ## 6. Agenda de la reunión con SAX (decisiones/preguntas)
 
-1. **EMQX:** ¿mantener activo / subir de tier? ¿Quién cubre el costo? (el free se
-   suspende por inactividad).
+1. **Infraestructura 24/7 (costo) — DECISIÓN CLAVE:** el piloto necesita planes de
+   pago en **EMQX** y **Railway** (ambos en free tier se cayeron por límites/
+   inactividad). Railway puso el Ingestion en modo "serverless", que **no sirve**
+   para un suscriptor MQTT persistente (se duerme y deja de recibir). Para el
+   equipo real ambos deben estar **always-on (de pago)** — del orden de ~$20–40/mes
+   en total. ¿Quién lo cubre? Sin esto, el flujo de datos reales no se sostiene.
 2. **Acceso al equipo:** ¿SSH remoto o presencial? ¿Credenciales del PostgreSQL local?
 3. **Esquema del equipo:** confirmar `spectras`, `validations_sentinel`,
    `command`/`*_action` (los `*_status` ya están).
