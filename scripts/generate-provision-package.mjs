@@ -117,11 +117,20 @@ async function main() {
     }
   );
   if (!putRes.ok) {
-    await fetch(`${EMQX_API}/api/v5/authorization/sources/built_in_database/rules/users`, {
-      method: "POST",
-      headers: { Authorization: emqxAuth, "Content-Type": "application/json" },
-      body: JSON.stringify([{ username: MQTT_USER, rules }]),
-    });
+    const postRes = await fetch(
+      `${EMQX_API}/api/v5/authorization/sources/built_in_database/rules/users`,
+      {
+        method: "POST",
+        headers: { Authorization: emqxAuth, "Content-Type": "application/json" },
+        body: JSON.stringify([{ username: MQTT_USER, rules }]),
+      }
+    );
+    if (!postRes.ok) {
+      console.log(
+        "    (ACL no aplicada: EMQX no tiene Authorization 'Built-in Database' habilitada. " +
+          "El equipo igual funciona por autenticación; la ACL por topic es endurecimiento opcional.)"
+      );
+    }
   }
 
   // 5. build the provision package
