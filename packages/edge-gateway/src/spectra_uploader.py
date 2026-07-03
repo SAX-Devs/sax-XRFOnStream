@@ -54,6 +54,12 @@ class SpectraUploader:
             logger.warning("Could not persist last_spectra_id to file")
 
     def _tick(self) -> None:
+        # Spectra are heavy (8192-channel arrays) — never buffer them while
+        # offline. The cursor simply pauses here and resumes on reconnect;
+        # the spectra themselves are safe in the equipment's spectras table.
+        if not self._mqtt.is_connected:
+            return
+
         if self._last_uploaded_id is None:
             # First run on this equipment: publish only spectra created from now
             # on. Sweeping months of historical spectra in one go is what froze

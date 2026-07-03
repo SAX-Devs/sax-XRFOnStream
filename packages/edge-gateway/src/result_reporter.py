@@ -78,6 +78,11 @@ class ResultReporter:
             return
 
         self._reported_commands.add(command_id)
+        # Keep the in-memory set bounded (same approach as the validator's
+        # replay set) — irrelevant at normal command rates, but never unbounded.
+        if len(self._reported_commands) > 10_000:
+            trimmed = list(self._reported_commands)[:5_000]
+            self._reported_commands -= set(trimmed)
 
         result_status = "completed" if status == "ready" else "error"
         payload = {

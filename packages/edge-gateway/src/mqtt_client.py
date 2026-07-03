@@ -3,6 +3,7 @@
 import json
 import logging
 import ssl
+import threading
 from collections.abc import Callable
 from pathlib import Path
 
@@ -34,6 +35,10 @@ class MqttClient:
             client_id=config.client_id,
         )
         self._client.username_pw_set(config.username, password)
+        # Cap paho's in-memory outbound queue: on a stalled link, an unbounded
+        # queue grows in RAM (excess messages are dropped instead — acceptable
+        # for telemetry, and heavy spectra are gated on connectivity upstream).
+        self._client.max_queued_messages_set(10_000)
 
         if config.use_tls:
             context = ssl.create_default_context()
@@ -60,7 +65,9 @@ class MqttClient:
             for topic, (callback, qos) in self._subscriptions.items():
                 client.subscribe(topic, qos)
                 logger.info(f"Re-subscribed to {topic}")
-            self._drain_buffer()
+            # Drain in a separate thread: a large backlog must not block paho's
+            # network loop (blocking it starves keepalives → disconnect loop).
+            threading.Thread(target=self._drain_buffer, daemon=True).start()
         else:
             logger.error(f"Connection failed with code: {reason_code}")
 
@@ -82,15 +89,26 @@ class MqttClient:
                 break
 
     def _drain_buffer(self) -> None:
-        """Send all buffered messages after reconnection."""
-        messages = self._offline_buffer.drain()
-        if not messages:
-            return
-        logger.info(f"Draining {len(messages)} buffered messages")
-        for msg_id, topic, payload, qos in messages:
-            self._client.publish(topic, payload, qos)
-            self._offline_buffer.delete(msg_id)
-        logger.info("Buffer drained successfully")
+        """Send buffered messages after reconnection, in bounded batches.
+
+        Never loads the whole buffer into RAM (incident 2026-07-02 class);
+        aborts early if the connection drops mid-drain.
+        """
+        total = 0
+        while self._connected:
+            messages = self._offline_buffer.drain_batch()
+            if not messages:
+                break
+            if total == 0:
+                logger.info("Draining buffered messages...")
+            for msg_id, topic, payload, qos in messages:
+                if not self._connected:
+                    break
+                self._client.publish(topic, payload, qos)
+                self._offline_buffer.delete(msg_id)
+                total += 1
+        if total:
+            logger.info(f"Buffer drained: {total} messages sent")
 
     def connect(self) -> None:
         """Connect to the MQTT broker and start the network loop."""
