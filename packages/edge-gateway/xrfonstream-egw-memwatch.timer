@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Edge Gateway memory watchdog every 30s
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target

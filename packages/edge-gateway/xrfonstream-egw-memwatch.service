@@ -1,0 +1,6 @@
+[Unit]
+Description=SAX Edge Gateway memory watchdog (userspace MemoryMax fallback)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/sax/edge-gateway/memory-watchdog.sh
