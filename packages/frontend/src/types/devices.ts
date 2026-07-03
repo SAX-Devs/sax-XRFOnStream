@@ -14,5 +14,8 @@ export type DeviceWithState = Device & {
 export function isDeviceOnline(lastSeenAt: string | null): boolean {
   if (!lastSeenAt) return false;
   const diff = Date.now() - new Date(lastSeenAt).getTime();
-  return diff < 30_000; // 30 seconds
+  // The ingestion service bumps last_seen_at at most once per minute (60s
+  // cache) and telemetry is change-only, so a healthy device can easily go
+  // minutes between bumps. 5 min matches the design docs' online window.
+  return diff < 5 * 60_000;
 }
