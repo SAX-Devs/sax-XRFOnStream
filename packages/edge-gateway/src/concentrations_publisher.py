@@ -40,12 +40,27 @@ class ConcentrationsPublisher:
     def _tick(self) -> None:
         if self._active is None:
             self._active = self._check_table()
+            if self._active:
+                # Same guard as the spectra uploader: start from the current max
+                # id so we never sweep a historical backlog into RAM at once.
+                try:
+                    self._last_uploaded_id = self._db.read_max_id("concentrations", "id")
+                    logger.info(
+                        f"Concentrations active: starting at id {self._last_uploaded_id} "
+                        "(historical backlog skipped)"
+                    )
+                except Exception:
+                    logger.exception("Failed to initialize last concentrations id")
+                    self._active = None
+                    return
 
         if not self._active:
             return
 
         try:
-            rows = self._db.read_rows_after("concentrations", "id", self._last_uploaded_id)
+            rows = self._db.read_rows_after(
+                "concentrations", "id", self._last_uploaded_id, limit=100
+            )
         except Exception:
             logger.exception("Failed to read concentrations")
             return

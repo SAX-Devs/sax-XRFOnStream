@@ -81,15 +81,35 @@ class DbReader:
 
         return self._execute_with_retry(op)
 
-    def read_rows_after(self, table_name: str, id_column: str, after_id: int) -> list[dict]:
-        """Read rows with id greater than after_id, ordered ascending."""
+    def read_rows_after(
+        self, table_name: str, id_column: str, after_id: int, limit: int | None = None
+    ) -> list[dict]:
+        """Read rows with id greater than after_id, ordered ascending.
+
+        Always pass a limit for tables that can be large (e.g. spectras): an
+        unbounded fetchall of a months-old table exhausted the equipment's RAM
+        and froze the whole device (incident 2026-07-02).
+        """
+        def op(conn):
+            with conn.cursor() as cur:
+                sql = f"SELECT * FROM {table_name} WHERE {id_column} > %s ORDER BY {id_column} ASC"  # noqa: S608
+                params: list = [after_id]
+                if limit is not None:
+                    sql += " LIMIT %s"
+                    params.append(limit)
+                cur.execute(sql, params)
+                return [dict(row) for row in cur.fetchall()]
+
+        return self._execute_with_retry(op)
+
+    def read_max_id(self, table_name: str, id_column: str) -> int:
+        """Return the current maximum id of a table (0 if empty)."""
         def op(conn):
             with conn.cursor() as cur:
                 cur.execute(
-                    f"SELECT * FROM {table_name} WHERE {id_column} > %s ORDER BY {id_column} ASC",  # noqa: S608
-                    (after_id,),
+                    f"SELECT COALESCE(MAX({id_column}), 0) AS max_id FROM {table_name}"  # noqa: S608
                 )
-                return [dict(row) for row in cur.fetchall()]
+                return cur.fetchone()["max_id"]
 
         return self._execute_with_retry(op)
 

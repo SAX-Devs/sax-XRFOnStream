@@ -27,5 +27,13 @@ ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
 
+# Resource guard-rails — the gateway must NEVER compete with the equipment's own
+# software. If it misbehaves, systemd kills only the gateway, not the device
+# (incident 2026-07-02: an unbounded spectra backfill exhausted system RAM and
+# froze the equipment). Nice keeps it below the equipment software in CPU priority.
+MemoryHigh=384M
+MemoryMax=512M
+Nice=10
+
 [Install]
 WantedBy=multi-user.target

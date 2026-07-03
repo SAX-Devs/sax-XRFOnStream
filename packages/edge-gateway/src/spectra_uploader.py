@@ -14,6 +14,11 @@ logger = logging.getLogger("edge-gateway.spectra-uploader")
 
 LAST_ID_FILE = "/var/lib/sax/last_spectra_id"
 
+# Hard cap per tick. Loading the whole historical spectras table at once (each
+# row carries an 8192-channel array) exhausted the equipment's RAM and froze the
+# device (incident 2026-07-02) — reads must always be small and bounded.
+BATCH_SIZE = 20
+
 
 class SpectraUploader:
     def __init__(
@@ -28,12 +33,16 @@ class SpectraUploader:
         self._topic = f"sax/{config.tenant_id}/{config.device_id}/spectra"
         self._last_uploaded_id = self._load_last_id()
 
-    def _load_last_id(self) -> int:
-        """Load last uploaded spectra ID from persistent file."""
+    def _load_last_id(self) -> int | None:
+        """Load last uploaded spectra ID from persistent file.
+
+        Returns None on first run (no state file) — the first tick then
+        initializes from the CURRENT max id, skipping the historical backlog.
+        """
         try:
             return int(Path(LAST_ID_FILE).read_text().strip())
         except (FileNotFoundError, ValueError):
-            return 0
+            return None
 
     def _save_last_id(self) -> None:
         """Persist last uploaded spectra ID to file."""
@@ -45,8 +54,26 @@ class SpectraUploader:
             logger.warning("Could not persist last_spectra_id to file")
 
     def _tick(self) -> None:
+        if self._last_uploaded_id is None:
+            # First run on this equipment: publish only spectra created from now
+            # on. Sweeping months of historical spectra in one go is what froze
+            # the device (2026-07-02) — the backlog is deliberately skipped.
+            try:
+                self._last_uploaded_id = self._db.read_max_id("spectras", "id")
+            except Exception:
+                logger.exception("Failed to initialize last spectra id")
+                return
+            self._save_last_id()
+            logger.info(
+                f"First run: starting at spectras id {self._last_uploaded_id} "
+                "(historical backlog skipped)"
+            )
+            return
+
         try:
-            rows = self._db.read_rows_after("spectras", "id", self._last_uploaded_id)
+            rows = self._db.read_rows_after(
+                "spectras", "id", self._last_uploaded_id, limit=BATCH_SIZE
+            )
         except Exception:
             logger.exception("Failed to read spectras table")
             return

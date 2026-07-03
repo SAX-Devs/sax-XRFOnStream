@@ -77,6 +77,26 @@ telemetría nueva en Supabase**.
 3. EMQX persiste la sesión (QoS 1, `clean_session=False`): los mensajes
    encolados se procesan al reconectar — no se pierden.
 
+## Incidente: equipo congelado por barrido de espectros ⚠️ (ocurrió 2026-07-02)
+
+**Síntomas:** ~2 min después de arrancar el gateway por primera vez, el equipo
+entero se congela (SSH muerto, MQTT muerto via LWT, software del equipo parado).
+
+**Causa raíz:** en su primera ejecución, el spectra_uploader no tenía cursor
+(`/var/lib/sax/last_spectra_id`) y hacía `SELECT *` de TODA la tabla `spectras`
+histórica (meses de espectros de 8192 canales) con `fetchall()` → gigabytes en
+RAM en una Raspberry Pi compartida con el software del equipo → OOM/thrash.
+
+**Fix (aplicado):** (1) primera ejecución inicializa el cursor al MAX(id) actual
+y NO publica el backlog histórico; (2) lecturas en lotes acotados (LIMIT 20);
+(3) `MemoryMax=512M` + `Nice=10` en la unit de systemd — si el gateway vuelve a
+excederse, systemd mata SOLO al gateway, nunca al equipo.
+
+**Recuperación:** reiniciar el equipo (corte de energía si no responde) y
+deshabilitar el gateway de inmediato (`systemctl disable --now
+xrfonstream-edge-gateway`) hasta desplegar la versión corregida. El
+congelamiento es solo de RAM: los datos y el software del equipo quedan intactos.
+
 ## Incidente: el dashboard no muestra datos para un usuario
 
 **Causa probable:** el usuario no tiene `tenant_id`/`role` correctos en
