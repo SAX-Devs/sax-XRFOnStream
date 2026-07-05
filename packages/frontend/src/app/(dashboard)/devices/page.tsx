@@ -1,5 +1,5 @@
 import { getDevices } from "@/services/devices";
-import { DeviceCard } from "@/components/devices/device-card";
+import { DevicesGrid } from "@/components/devices/devices-grid";
 
 export default async function DevicesPage() {
   const devices = await getDevices();
@@ -16,11 +16,7 @@ export default async function DevicesPage() {
       {devices.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {devices.map((device) => (
-            <DeviceCard key={device.id} device={device} />
-          ))}
-        </div>
+        <DevicesGrid initialDevices={devices} />
       )}
     </div>
   );
