@@ -26,6 +26,7 @@ class MqttClient:
         self._config = config
         self._offline_buffer = offline_buffer
         self._connected = False
+        self._connect_count = 0
         self._subscriptions: dict[str, tuple[Callable, int]] = {}
 
         password = Path(config.password_file).read_text().strip()
@@ -61,6 +62,7 @@ class MqttClient:
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         if reason_code == 0:
             self._connected = True
+            self._connect_count += 1
             logger.info("Connected to MQTT broker")
             for topic, (callback, qos) in self._subscriptions.items():
                 client.subscribe(topic, qos)
@@ -123,12 +125,23 @@ class MqttClient:
         self._connected = False
         logger.info("MQTT client disconnected")
 
-    def publish(self, topic: str, payload: bytes, qos: int = 1) -> None:
-        """Publish a message, buffering if disconnected."""
+    def publish(
+        self, topic: str, payload: bytes, qos: int = 1, retain: bool = False
+    ) -> None:
+        """Publish a message, buffering if disconnected.
+
+        Buffered messages lose the retain flag — acceptable: the only retained
+        publisher (equipment state) force-republishes on every reconnect.
+        """
         if self._connected:
-            self._client.publish(topic, payload, qos)
+            self._client.publish(topic, payload, qos, retain)
         else:
             self._offline_buffer.enqueue(topic, payload, qos)
+
+    @property
+    def connection_generation(self) -> int:
+        """Increments on every (re)connect — lets publishers detect reconnects."""
+        return self._connect_count
 
     def subscribe(self, topic: str, callback: Callable, qos: int = 1) -> None:
         """Subscribe to a topic with a callback."""

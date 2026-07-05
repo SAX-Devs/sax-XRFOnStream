@@ -22,6 +22,7 @@ class EquipmentStatePublisher:
         self._mqtt = mqtt_client
         self._db = db_reader
         self._last_state: str | None = None
+        self._last_generation = -1
         self._topic = f"sax/{config.tenant_id}/{config.device_id}/equipment_state"
 
     def infer_state(self) -> tuple[str, dict]:
@@ -40,7 +41,10 @@ class EquipmentStatePublisher:
         except Exception:
             busy_tasks = []
 
-        task_names = [t.get("task", "") for t in busy_tasks]
+        # The equipment's current_busy_tasks column is `task_name` (verified on
+        # the real device: module_name | task_id | task_name | ...). Keep `task`
+        # as a fallback for older schemas.
+        task_names = [str(t.get("task_name") or t.get("task") or "") for t in busy_tasks]
 
         for name in task_names:
             if "measure" in name.lower():
@@ -60,7 +64,19 @@ class EquipmentStatePublisher:
         return ("idle", {})
 
     def publish_if_changed(self) -> None:
-        """Publish equipment state only if it changed since last check."""
+        """Publish equipment state if it changed — or after a (re)connect.
+
+        An abrupt disconnect leaves the broker's retained LWT "offline" on the
+        topic; without a forced republish the cloud stays "offline" until the
+        local state happens to change. Publishing with retain=True keeps the
+        topic's retained message equal to the latest REAL state, so consumers
+        (re)subscribing always see the truth.
+        """
+        generation = self._mqtt.connection_generation
+        if generation != self._last_generation:
+            self._last_generation = generation
+            self._last_state = None  # force republish on this new connection
+
         state, detail = self.infer_state()
 
         if state == self._last_state:
@@ -73,5 +89,7 @@ class EquipmentStatePublisher:
             "state": state,
             "detail": detail,
         }
-        self._mqtt.publish(self._topic, json.dumps(payload, default=str).encode())
+        self._mqtt.publish(
+            self._topic, json.dumps(payload, default=str).encode(), retain=True
+        )
         logger.info(f"Equipment state changed to: {state}")
