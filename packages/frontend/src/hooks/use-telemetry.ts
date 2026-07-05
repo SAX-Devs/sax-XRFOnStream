@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { ModuleDataMap, ModuleName } from "@/types/telemetry";
 
@@ -14,9 +14,6 @@ export function useTelemetry<M extends ModuleName>(
   deviceId: string,
   module: M
 ): TelemetryState<ModuleDataMap[M]> {
-  // Unique per hook instance so two subscriptions to the same module (e.g. the
-  // SCADA composite hook + a service diagnostic card) don't collide on channel name.
-  const channelId = useId();
   const [state, setState] = useState<TelemetryState<ModuleDataMap[M]>>({
     data: null,
     loading: true,
@@ -25,6 +22,7 @@ export function useTelemetry<M extends ModuleName>(
 
   useEffect(() => {
     const supabase = createClient();
+    let active = true;
 
     async function fetchLatest() {
       const { data } = await supabase
@@ -36,6 +34,7 @@ export function useTelemetry<M extends ModuleName>(
         .limit(1)
         .maybeSingle();
 
+      if (!active) return;
       if (data) {
         setState({
           data: data.data as unknown as ModuleDataMap[M],
@@ -49,39 +48,17 @@ export function useTelemetry<M extends ModuleName>(
 
     fetchLatest();
 
-    // Realtime: filter by device_id only; module check happens in callback
-    // because Supabase Realtime postgres_changes doesn't support compound filters
-    const channel = supabase
-      .channel(`telemetry:${deviceId}:${module}:${channelId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "device_telemetry",
-          filter: `device_id=eq.${deviceId}`,
-        },
-        (payload) => {
-          const row = payload.new as {
-            module: string;
-            data: Record<string, unknown>;
-            received_at: string;
-          };
-          if (row.module === module) {
-            setState({
-              data: row.data as unknown as ModuleDataMap[M],
-              loading: false,
-              lastUpdated: new Date(row.received_at),
-            });
-          }
-        }
-      )
-      .subscribe();
+    // SCADA-style polling: device_telemetry is deliberately NOT in the Realtime
+    // publication (its ~2s insert rate would burn through message quotas), so
+    // live values come from a bounded 3s poll — one tiny latest-row query per
+    // module, matching the gateway's own 2s publish cadence.
+    const poll = setInterval(fetchLatest, 3_000);
 
     return () => {
-      supabase.removeChannel(channel);
+      active = false;
+      clearInterval(poll);
     };
-  }, [deviceId, module, channelId]);
+  }, [deviceId, module]);
 
   return state;
 }
