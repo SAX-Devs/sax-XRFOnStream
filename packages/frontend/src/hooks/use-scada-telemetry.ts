@@ -90,9 +90,13 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
     interchangerMode: armMode(i?.current_position),
     chamberLocked: i?.chamber_lock ?? false,
     maintenanceDoorClosed: i?.door_lock ?? false,
-    // Detector + generator. `measuring` is the real acquisition flag (d_on can
-    // be false mid-measurement — verified against live equipment data).
-    detectorMeasuring: d?.measuring ?? d?.d_on ?? false,
+    // Detector + generator. The X-ray beam / detector glow follow the SAME
+    // signal as the state badge (equipment_state via Realtime) so the diagram
+    // and the badge can never contradict each other; the detector's own flags
+    // are only a fallback while equipment_state hasn't arrived yet.
+    detectorMeasuring: equip.state
+      ? equip.state === "measuring"
+      : (d?.measuring ?? d?.d_on ?? false),
     generatorHvOn: g?.hv_on ?? false,
     // Vacuum chamber leak (true = dry/OK on the equipment)
     chamberLeakOk: v?.chamber_leak_ok ?? true,
