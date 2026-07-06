@@ -145,9 +145,19 @@ export function MeasurementsScreen({ deviceId }: { deviceId: string }) {
               </div>
             )}
 
-            {/* Rendered only when the measurement has quantified data. */}
-            {Object.keys(concentrations).length > 0 && (
+            {Object.keys(concentrations).length > 0 ? (
               <ConcentrationTable elements={concentrations} unit="g/L" />
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-black/60 px-4 py-4 backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Concentraciones Cuantificadas
+                  </h2>
+                  <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
+                    Próximamente
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         </div>
