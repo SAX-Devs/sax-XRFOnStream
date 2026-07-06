@@ -8,6 +8,8 @@ interface TelemetryState<T> {
   data: T | null;
   loading: boolean;
   lastUpdated: Date | null;
+  /** True when the LAST poll query failed (Supabase unreachable, etc.). */
+  errored: boolean;
 }
 
 export function useTelemetry<M extends ModuleName>(
@@ -18,6 +20,7 @@ export function useTelemetry<M extends ModuleName>(
     data: null,
     loading: true,
     lastUpdated: null,
+    errored: false,
   });
 
   useEffect(() => {
@@ -25,7 +28,7 @@ export function useTelemetry<M extends ModuleName>(
     let active = true;
 
     async function fetchLatest() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("device_telemetry")
         .select("data, received_at")
         .eq("device_id", deviceId)
@@ -35,14 +38,19 @@ export function useTelemetry<M extends ModuleName>(
         .maybeSingle();
 
       if (!active) return;
+      if (error) {
+        setState((prev) => ({ ...prev, loading: false, errored: true }));
+        return;
+      }
       if (data) {
         setState({
           data: data.data as unknown as ModuleDataMap[M],
           loading: false,
           lastUpdated: new Date(data.received_at),
+          errored: false,
         });
       } else {
-        setState((prev) => ({ ...prev, loading: false }));
+        setState((prev) => ({ ...prev, loading: false, errored: false }));
       }
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-type StatusLevel = "ok" | "warning" | "error";
+export type StatusLevel = "ok" | "warning" | "error";
 
 interface StatusRowProps {
   label: string;

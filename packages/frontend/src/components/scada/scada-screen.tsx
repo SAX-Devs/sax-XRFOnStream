@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ProcessDiagram } from "./process-diagram";
 import { DiagramHeader } from "./diagram-header";
 import { ParamsPanel } from "./params-panel";
 import { MessagesPanel } from "./messages-panel";
-import { StatusPanel } from "./status-panel";
+import { StatusPanel, type StatusLevel } from "./status-panel";
 import { SpectrumButton, StopButton } from "./control-bar";
 import { useScadaTelemetry } from "@/hooks/use-scada-telemetry";
 import { useScadaEvents } from "@/hooks/use-scada-events";
@@ -14,6 +15,17 @@ interface ScadaScreenProps {
   userLabel?: string;
   userRole?: string;
 }
+
+/** Equipment operational state → system-panel row (status colour + label). */
+const EQUIPMENT_ROW: Record<string, { status: StatusLevel; label: string }> = {
+  measuring: { status: "ok", label: "Midiendo" },
+  standby: { status: "ok", label: "Standby" },
+  idle: { status: "ok", label: "Reposo" },
+  initializing: { status: "ok", label: "Inicializando" },
+  error: { status: "error", label: "ERROR" },
+  offline: { status: "error", label: "Desconectado" },
+  unknown: { status: "warning", label: "Desconocido" },
+};
 
 export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps) {
   // P&ID tags are clutter for the operator view; only show them in the Service screen.
@@ -25,6 +37,36 @@ export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps)
   // Live event log: every discrete transition observed while the page is open.
   const events = useScadaEvents(diagram, params, meta.equipmentState, meta.loading);
 
+  // Re-render every 15s so the data-freshness indicator ages truthfully even
+  // when no new data arrives.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 15_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // "Internet" = equipment ↔ cloud link, judged by data freshness.
+  const ageMs = meta.lastUpdated
+    ? Date.now() - meta.lastUpdated.getTime()
+    : null;
+  const internet: StatusLevel =
+    ageMs === null
+      ? meta.loading
+        ? "warning"
+        : "error"
+      : ageMs < 60_000
+        ? "ok"
+        : ageMs < 300_000
+          ? "warning"
+          : "error";
+
+  // "DB" = dashboard ↔ Supabase (did the last polls succeed?).
+  const database: StatusLevel = meta.dbOk ? "ok" : "error";
+
+  // "Equipo" = real operational state.
+  const equipment =
+    EQUIPMENT_ROW[meta.equipmentState ?? "unknown"] ?? EQUIPMENT_ROW.unknown;
+
   return (
     <div className="space-y-3">
       <DiagramHeader userLabel={userLabel} userRole={userRole} />
@@ -34,7 +76,12 @@ export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps)
         <div className="flex flex-col gap-3">
           <SpectrumButton />
           <StopButton />
-          <StatusPanel />
+          <StatusPanel
+            internet={internet}
+            database={database}
+            equipment={equipment.status}
+            equipmentLabel={equipment.label}
+          />
           <MessagesPanel messages={events} />
         </div>
 

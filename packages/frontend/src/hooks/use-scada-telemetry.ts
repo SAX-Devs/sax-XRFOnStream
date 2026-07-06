@@ -13,6 +13,8 @@ interface ScadaTelemetry {
     loading: boolean;
     lastUpdated: Date | null;
     equipmentState: EquipmentStateEnum | null;
+    /** False when any telemetry poll failed (dashboard ↔ Supabase problem). */
+    dbOk: boolean;
   };
 }
 
@@ -133,6 +135,7 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
     : null;
 
   const hasAnyData = Boolean(c || v || i || d || g || tp || a);
+  const dbOk = ![circ, vac, inter, det, gen, temp, aux].some((s) => s.errored);
 
   return {
     diagram,
@@ -141,6 +144,7 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
       loading: !hasAnyData,
       lastUpdated,
       equipmentState: equip.state,
+      dbOk,
     },
   };
 }
