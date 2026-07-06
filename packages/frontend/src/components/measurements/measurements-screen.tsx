@@ -145,20 +145,9 @@ export function MeasurementsScreen({ deviceId }: { deviceId: string }) {
               </div>
             )}
 
-            {Object.keys(concentrations).length > 0 ? (
+            {/* Rendered only when the measurement has quantified data. */}
+            {Object.keys(concentrations).length > 0 && (
               <ConcentrationTable elements={concentrations} unit="g/L" />
-            ) : (
-              <div className="rounded-2xl border border-white/10 bg-black/60 px-5 py-6 backdrop-blur-md">
-                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Concentraciones Cuantificadas
-                </h2>
-                <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
-                  El equipo aún no publica concentraciones — el cálculo
-                  cuantitativo en el equipo (dependencia DEP-01, a implementar
-                  por SAX) está pendiente. Cuando exista, aparecerán aquí
-                  automáticamente.
-                </p>
-              </div>
             )}
           </div>
         </div>
