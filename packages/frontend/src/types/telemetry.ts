@@ -103,6 +103,9 @@ export interface DetectorData {
   parset: number;
   threshold: number;
   d_on: boolean;
+  /** True while an acquisition is running (observed in real telemetry; the
+   * reliable "is measuring" flag — d_on can be false during a measurement). */
+  measuring?: boolean;
 }
 
 export interface TempControlData {

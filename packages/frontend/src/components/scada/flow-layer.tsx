@@ -15,6 +15,9 @@ interface FlowState {
   inletValve: boolean;
   outletValve: boolean;
   pumpState: "FORWARD" | "REVERSE" | "STOP";
+  /** Measured inlet flow — this is an ON-STREAM analyzer: the process stream
+   * flows through the equipment even with the pump stopped. */
+  flowRate: number;
 }
 
 interface FlowLayerProps {
@@ -114,19 +117,23 @@ export function FlowLayer({ state }: FlowLayerProps) {
   const reverse = state.pumpState === "REVERSE";
 
   // === Active flow logic ===
-  // Liquid path: source valves → pump → detector.
-  const waterFlow = state.waterValve && pumping;
-  const brineFlow = state.brineValve && pumping;
-  const retroOutFlow = state.retroValveOut && pumping;
+  // ON-STREAM analyzer: liquid moves whenever the measured flow says so, pump
+  // running or not (with the pump stopped, the stream enters via the bypass /
+  // Inlet Valve). The pump state alone must never gate the animations.
+  const flowing = pumping || state.flowRate > 0.1;
+
+  // Liquid path: source valves → (pump or bypass) → chamber.
+  const waterFlow = state.waterValve && flowing;
+  const brineFlow = state.brineValve && flowing;
+  const retroOutFlow = state.retroValveOut && flowing;
   const mainFlow = waterFlow || brineFlow || retroOutFlow;
   const pumpToDetectorFlow = mainFlow;
 
-  // Bypass path: when the Inlet Valve is open, sample flows around the pump
-  // (feed → Inlet Valve → pump-output line) in parallel with the pump.
+  // Bypass branch: animated when the equipment reports the Inlet Valve open.
   const bypassFlow = state.inletValve && mainFlow;
 
-  // Drain path: chamber → Outlet Valve → off-screen vent. Gated on outletValve.
-  const drainFlow = state.outletValve;
+  // Drain path: chamber → Outlet Valve → off-screen vent.
+  const drainFlow = state.outletValve && flowing;
   const retroInFlow = state.retroValveIn;
 
   return (

@@ -73,6 +73,10 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
     sampleState.maintenanceDoorClosed &&
     sampleState.chamberLeakOk;
 
+  // ON-STREAM: liquid is moving whenever the measured flow says so — the
+  // process stream flows through the equipment even with the pump stopped.
+  const flowing = sampleState.pumpState !== "STOP" || sampleState.flowRate > 0.1;
+
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#020617] shadow-2xl">
       <svg
@@ -192,7 +196,7 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           height={88}
           tag={t("AC-001")}
           interchangerMode={sampleState.interchangerMode}
-          pumping={sampleState.pumpState !== "STOP"}
+          pumping={flowing}
         />
 
         {/* Honeycomb window between the chambers — radiation crosses here. */}
@@ -273,7 +277,7 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           x={660}
           y={288}
           flowRate={sampleState.flowRate}
-          active={sampleState.pumpState !== "STOP"}
+          active={sampleState.flowRate > 0.1}
           tag={t("FE-101")}
           displaySide="right"
         />
@@ -285,7 +289,7 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           x={660}
           y={450}
           flowRate={sampleState.flowRateOut}
-          active={sampleState.pumpState !== "STOP"}
+          active={sampleState.flowRateOut > 0.1}
           tag={t("FE-102")}
         />
 

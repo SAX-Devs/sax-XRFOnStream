@@ -88,8 +88,9 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
     interchangerMode: armMode(i?.current_position),
     chamberLocked: i?.chamber_lock ?? false,
     maintenanceDoorClosed: i?.door_lock ?? false,
-    // Detector + generator
-    detectorMeasuring: d?.d_on ?? false,
+    // Detector + generator. `measuring` is the real acquisition flag (d_on can
+    // be false mid-measurement — verified against live equipment data).
+    detectorMeasuring: d?.measuring ?? d?.d_on ?? false,
     generatorHvOn: g?.hv_on ?? false,
     // Vacuum chamber leak (true = dry/OK on the equipment)
     chamberLeakOk: v?.chamber_leak_ok ?? true,
