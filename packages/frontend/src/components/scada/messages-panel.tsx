@@ -9,40 +9,6 @@ interface Message {
   text: string;
 }
 
-const SAMPLE_MESSAGES: Message[] = [
-  { id: 1, timestamp: "15:14:23", severity: "info", text: "Sistema iniciado" },
-  {
-    id: 2,
-    timestamp: "15:14:45",
-    severity: "info",
-    text: "Pump peristáltico → FORWARD",
-  },
-  {
-    id: 3,
-    timestamp: "15:15:02",
-    severity: "info",
-    text: "Brine in Valve abierta",
-  },
-  {
-    id: 4,
-    timestamp: "15:15:08",
-    severity: "info",
-    text: "Iniciando medición XRF",
-  },
-  {
-    id: 5,
-    timestamp: "15:15:15",
-    severity: "warning",
-    text: "Cabinet T elevada (24.3 °C)",
-  },
-  {
-    id: 6,
-    timestamp: "15:15:22",
-    severity: "info",
-    text: "Vacuum I activado",
-  },
-];
-
 function MessageItem({ message }: { message: Message }) {
   const dotColor = {
     info: "bg-blue-500",
@@ -78,12 +44,11 @@ function MessageItem({ message }: { message: Message }) {
 }
 
 interface MessagesPanelProps {
-  messages?: Message[];
+  /** Live event log (client-side transitions observed while the page is open). */
+  messages: Message[];
 }
 
-export function MessagesPanel({
-  messages = SAMPLE_MESSAGES,
-}: MessagesPanelProps) {
+export function MessagesPanel({ messages }: MessagesPanelProps) {
   return (
     <div className="flex flex-col rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
@@ -94,14 +59,22 @@ export function MessagesPanel({
           {messages.length}
         </span>
       </div>
-      <ul className="flex-1 overflow-y-auto" style={{ maxHeight: "320px" }}>
-        {messages
-          .slice()
-          .reverse()
-          .map((msg) => (
-            <MessageItem key={msg.id} message={msg} />
-          ))}
-      </ul>
+      {messages.length === 0 ? (
+        <div className="px-3 py-6 text-center text-[11px] leading-relaxed text-slate-600">
+          Registrando eventos en vivo…
+          <br />
+          Los cambios del equipo aparecerán aquí.
+        </div>
+      ) : (
+        <ul className="flex-1 overflow-y-auto" style={{ maxHeight: "320px" }}>
+          {messages
+            .slice()
+            .reverse()
+            .map((msg) => (
+              <MessageItem key={msg.id} message={msg} />
+            ))}
+        </ul>
+      )}
     </div>
   );
 }

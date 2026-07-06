@@ -7,6 +7,7 @@ import { MessagesPanel } from "./messages-panel";
 import { StatusPanel } from "./status-panel";
 import { SpectrumButton, StopButton } from "./control-bar";
 import { useScadaTelemetry } from "@/hooks/use-scada-telemetry";
+import { useScadaEvents } from "@/hooks/use-scada-events";
 
 interface ScadaScreenProps {
   deviceId: string;
@@ -19,7 +20,10 @@ export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps)
   const showTags = userRole === "service";
 
   // Live telemetry → diagram visual state + parameters panel.
-  const { diagram, params } = useScadaTelemetry(deviceId);
+  const { diagram, params, meta } = useScadaTelemetry(deviceId);
+
+  // Live event log: every discrete transition observed while the page is open.
+  const events = useScadaEvents(diagram, params, meta.equipmentState, meta.loading);
 
   return (
     <div className="space-y-3">
@@ -31,7 +35,7 @@ export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps)
           <SpectrumButton />
           <StopButton />
           <StatusPanel />
-          <MessagesPanel />
+          <MessagesPanel messages={events} />
         </div>
 
         {/* Center — process diagram */}
