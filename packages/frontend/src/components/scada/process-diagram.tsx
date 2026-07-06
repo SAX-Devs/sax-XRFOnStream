@@ -76,6 +76,11 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
   // ON-STREAM: liquid is moving whenever the measured flow says so — the
   // process stream flows through the equipment even with the pump stopped.
   const flowing = sampleState.pumpState !== "STOP" || sampleState.flowRate > 0.1;
+  // Outlet counts as flowing only when meaningful vs the inlet (>5%) — filters
+  // sensor noise (e.g. out=8 while in=1591 during a chamber blockage).
+  const flowingOut =
+    sampleState.flowRateOut > 0.1 &&
+    sampleState.flowRateOut > sampleState.flowRate * 0.05;
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#020617] shadow-2xl">
@@ -289,7 +294,7 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           x={660}
           y={450}
           flowRate={sampleState.flowRateOut}
-          active={sampleState.flowRateOut > 0.1}
+          active={flowingOut}
           tag={t("FE-102")}
         />
 

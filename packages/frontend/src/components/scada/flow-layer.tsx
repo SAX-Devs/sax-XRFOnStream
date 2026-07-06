@@ -18,6 +18,9 @@ interface FlowState {
   /** Measured inlet flow — this is an ON-STREAM analyzer: the process stream
    * flows through the equipment even with the pump stopped. */
   flowRate: number;
+  /** Measured outlet flow — animates the drain side independently, so an
+   * in/out imbalance (chamber leaking/blocked) is visible in the diagram. */
+  flowRateOut: number;
 }
 
 interface FlowLayerProps {
@@ -120,21 +123,29 @@ export function FlowLayer({ state }: FlowLayerProps) {
   // ON-STREAM analyzer: liquid moves whenever the measured flow says so, pump
   // running or not (with the pump stopped, the stream enters via the bypass /
   // Inlet Valve). The pump state alone must never gate the animations.
-  const flowing = pumping || state.flowRate > 0.1;
+  //
+  // Inlet and outlet sides animate INDEPENDENTLY from their own sensors, so a
+  // hydraulic imbalance reads at a glance: e.g. "Analyzer Chamber Leaking or
+  // Blocked" (in ~1591, out ~8) shows liquid entering and nothing draining.
+  const flowingIn = pumping || state.flowRate > 0.1;
+  // Out counts as flowing only when meaningful vs the inlet (>5%) — filters
+  // sensor noise like out=8 vs in=1591. Thresholds pending SAX's units spec.
+  const flowingOut =
+    state.flowRateOut > 0.1 && state.flowRateOut > state.flowRate * 0.05;
 
   // Liquid path: source valves → (pump or bypass) → chamber.
-  const waterFlow = state.waterValve && flowing;
-  const brineFlow = state.brineValve && flowing;
-  const retroOutFlow = state.retroValveOut && flowing;
+  const waterFlow = state.waterValve && flowingIn;
+  const brineFlow = state.brineValve && flowingIn;
+  const retroOutFlow = state.retroValveOut && flowingIn;
   const mainFlow = waterFlow || brineFlow || retroOutFlow;
   const pumpToDetectorFlow = mainFlow;
 
   // Bypass branch: animated when the equipment reports the Inlet Valve open.
   const bypassFlow = state.inletValve && mainFlow;
 
-  // Drain path: chamber → Outlet Valve → off-screen vent.
-  const drainFlow = state.outletValve && flowing;
-  const retroInFlow = state.retroValveIn;
+  // Drain path: chamber → Outlet Valve → off-screen vent (outlet sensor).
+  const drainFlow = state.outletValve && flowingOut;
+  const retroInFlow = state.retroValveIn && flowingOut;
 
   return (
     <g className="flow-layer">
