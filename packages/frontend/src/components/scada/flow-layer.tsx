@@ -138,10 +138,14 @@ export function FlowLayer({ state }: FlowLayerProps) {
   const brineFlow = state.brineValve && flowingIn;
   const retroOutFlow = state.retroValveOut && flowingIn;
   const mainFlow = waterFlow || brineFlow || retroOutFlow;
-  const pumpToDetectorFlow = mainFlow;
 
-  // Bypass branch: animated when the equipment reports the Inlet Valve open.
+  // Routing around the pump: a STOPPED peristaltic pump BLOCKS the line, so
+  // liquid can only cross it when it's running. With the pump stopped and the
+  // Inlet Valve open, the stream detours through the bypass and rejoins the
+  // trunk AFTER the pump — nothing may animate through the pump itself.
+  const viaPump = mainFlow && pumping;
   const bypassFlow = state.inletValve && mainFlow;
+  const viaBypassOnly = bypassFlow && !pumping;
 
   // Drain path: chamber → Outlet Valve → off-screen vent (outlet sensor).
   const drainFlow = state.outletValve && flowingOut;
@@ -157,6 +161,11 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <path id="flow-brine-merger" d="M 215 220 L 320 220 L 320 165" />
         <path id="flow-merger-pump" d="M 320 165 L 630 165" />
         <path id="flow-pump-to-detector" d="M 660 195 L 660 310" />
+
+        {/* Pump-stopped routing: feed only reaches the bypass tap, and flow
+            re-enters the trunk AFTER the pump (at the bypass rejoin, y=240). */}
+        <path id="flow-feed-to-tap" d="M 320 165 L 595 165" />
+        <path id="flow-rejoin-to-chamber" d="M 660 240 L 660 310" />
 
         {/* Bypass path — sample routed around the pump through the Inlet Valve */}
         <path id="flow-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 198" />
@@ -228,8 +237,10 @@ export function FlowLayer({ state }: FlowLayerProps) {
         </>
       )}
 
-      {/* === Combined to pump (mixed colour after merger) === */}
-      {mainFlow && (
+      {/* === Feed after the merger ===
+          Pump running: all the way into the pump. Pump stopped: only up to the
+          bypass tap (a stopped peristaltic pump blocks the line). */}
+      {viaPump && (
         <Flow
           pathId="flow-merger-pump"
           color={COLORS.mixed}
@@ -237,13 +248,31 @@ export function FlowLayer({ state }: FlowLayerProps) {
           reverse={reverse}
         />
       )}
+      {viaBypassOnly && (
+        <Flow
+          pathId="flow-feed-to-tap"
+          color={COLORS.mixed}
+          duration={2.1}
+          reverse={reverse}
+        />
+      )}
 
-      {/* === Pump → Detector (liquid sample, direct) === */}
-      {pumpToDetectorFlow && (
+      {/* === Down to the chamber ===
+          Through the pump when it runs; from the bypass rejoin when it doesn't. */}
+      {viaPump && (
         <Flow
           pathId="flow-pump-to-detector"
           color={COLORS.mixed}
           duration={1.8}
+          reverse={reverse}
+        />
+      )}
+      {viaBypassOnly && (
+        <Flow
+          pathId="flow-rejoin-to-chamber"
+          color={COLORS.mixed}
+          duration={1.2}
+          particleCount={3}
           reverse={reverse}
         />
       )}
