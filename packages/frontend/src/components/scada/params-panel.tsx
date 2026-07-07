@@ -158,10 +158,13 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
           value={params.dcOk ? "OK" : "FAIL"}
           status={params.dcOk ? "normal" : "critical"}
         />
+        {/* Severity per SAX: high tank pressure is a semi-normal WARNING
+            (matches the equipment's own Sentinel); LOW pressure is the
+            genuinely problematic condition → critical. */}
         <ParamCard
           label="Tank Press High"
           value={params.tankPressureHigh ? "HIGH" : "OK"}
-          status={params.tankPressureHigh ? "critical" : "normal"}
+          status={params.tankPressureHigh ? "warning" : "normal"}
         />
         <ParamCard
           label="Tank Press Low"
