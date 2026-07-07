@@ -288,6 +288,7 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           active={sampleState.flowRate > 0.1}
           tag={t("FE-101")}
           displaySide="right"
+          unit=""
         />
 
         {/* === FLOW METER — inline flow element at the chamber outlet === */}
@@ -299,6 +300,7 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           flowRate={sampleState.flowRateOut}
           active={flowingOut}
           tag={t("FE-102")}
+          unit=""
         />
 
         {/* === PRESSURE SWITCH — measures pressure of sample entering the analysis chamber === */}

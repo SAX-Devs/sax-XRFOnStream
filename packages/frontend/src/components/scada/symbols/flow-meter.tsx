@@ -166,7 +166,7 @@ export function FlowMeter({
         fontFamily="ui-monospace, monospace"
         style={colorTrans}
       >
-        {flowRate.toFixed(1)}
+        {flowRate.toFixed(0)}
       </text>
 
       {/* Unit (right-aligned inside the display) */}

@@ -94,16 +94,9 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
       <div className="grid grid-cols-2 gap-1.5">
         <ParamCard label="Operation Mode" value={params.operationMode} />
         <ParamCard label="Pump State" value={params.pumpState} />
-        <ParamCard
-          label="Flow In"
-          value={params.flowIn.toFixed(1)}
-          unit="L/m"
-        />
-        <ParamCard
-          label="Flow Out"
-          value={params.flowOut.toFixed(1)}
-          unit="L/m"
-        />
+        {/* Flow values are unitless per SAX (raw 0–4000 range). */}
+        <ParamCard label="Flow In" value={params.flowIn.toFixed(0)} />
+        <ParamCard label="Flow Out" value={params.flowOut.toFixed(0)} />
         <ParamCard
           label="Atmosphere"
           value={params.atmosphericStatus}
