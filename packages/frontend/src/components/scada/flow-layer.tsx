@@ -175,9 +175,12 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <path id="flow-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 198" />
         <path id="flow-bypass-out" d="M 738 225 L 738 240 L 660 240" />
 
-        {/* Retro IN (top): tank → up → joins the brine feed line. */}
+        {/* Retro IN (top): tank → up → joins the brine feed line, then continues
+            along the shared elbow to the merger (that stretch belongs to the
+            brine pipe, so it needs its own motion path when brine is closed). */}
         <path id="flow-retro-top-feed" d="M 160 440 L 200 440" />
         <path id="flow-retro-top-up" d="M 215 440 L 250 440 L 250 220" />
+        <path id="flow-retro-join-to-merger" d="M 250 220 L 320 220 L 320 165" />
         {/* Retro OUT (bottom): defined tank→drain; animated REVERSED (drain→tank). */}
         <path id="flow-retro-bottom-feed" d="M 160 490 L 200 490" />
         <path id="flow-retro-bottom-drain" d="M 215 490 L 660 490" />
@@ -238,6 +241,15 @@ export function FlowLayer({ state }: FlowLayerProps) {
             pathId="flow-retro-top-up"
             color={COLORS.retroBrine}
             duration={3.5}
+            reverse={reverse}
+          />
+          {/* Continue through the shared elbow up to the merger so the route
+              has no dead stretch when the brine valve is closed. */}
+          <Flow
+            pathId="flow-retro-join-to-merger"
+            color={COLORS.retroBrine}
+            duration={2.0}
+            particleCount={3}
             reverse={reverse}
           />
         </>
