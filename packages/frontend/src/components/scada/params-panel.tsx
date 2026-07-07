@@ -44,6 +44,7 @@ export interface ScadaParams {
   vacuumSensor: number;
   cabinetTemp: number;
   tubeTemp: number;
+  hvOn: boolean;
   tubeHighVoltage: number;
   beamCurrent: number;
   interchangerPosition: string;
@@ -68,6 +69,7 @@ const DEFAULT_PARAMS = {
   vacuumSensor: 0.972,
   cabinetTemp: 24.3,
   tubeTemp: 45.1,
+  hvOn: true,
   tubeHighVoltage: 49.988,
   beamCurrent: 289.5,
   interchangerPosition: "NORMAL",
@@ -121,6 +123,10 @@ export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
           value={params.tubeTemp.toFixed(1)}
           unit="°C"
           status={params.tubeTemp > 50 ? "warning" : "normal"}
+        />
+        <ParamCard
+          label="HV On"
+          value={params.hvOn ? "ON" : "OFF"}
         />
         <ParamCard
           label="Tube HV"

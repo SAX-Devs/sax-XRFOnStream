@@ -32,7 +32,10 @@ export function InternalChamber({
   const cx = x + width / 2;
   const tubeColor = hvOn ? "#fbbf24" : "#64748b";
   const detColor = measuring ? "#22d3ee" : "#64748b";
-  const beamOn = hvOn && measuring;
+  // Two independent physical phenomena (per SAX): the tube irradiates whenever
+  // HV is on (hv_on), measuring or not — typical in standby. The detector only
+  // collects during an acquisition (measuring).
+  const detectionOn = hvOn && measuring;
 
   // Tube (upper) and detector (lower), both on the right, noses toward the window
   const tubeCx = x + width * 0.6;
@@ -83,8 +86,9 @@ export function InternalChamber({
         strokeWidth="1"
       />
 
-      {/* Radiation beam: tube → window point → detector */}
-      {beamOn && (
+      {/* X-ray beam: tube → window point — visible whenever HV is ON,
+          even between acquisitions (the tube really is radiating). */}
+      {hvOn && (
         <g>
           <line
             x1={noseTube.x}
@@ -103,24 +107,6 @@ export function InternalChamber({
               repeatCount="indefinite"
             />
           </line>
-          <line
-            x1={pointX}
-            y1={pointY}
-            x2={noseDet.x}
-            y2={noseDet.y}
-            stroke="#22d3ee"
-            strokeWidth="2"
-            strokeLinecap="round"
-            filter="url(#detector-glow)"
-          >
-            <animate
-              attributeName="opacity"
-              values="0.45;0.9;0.45"
-              dur="1.6s"
-              begin="0.2s"
-              repeatCount="indefinite"
-            />
-          </line>
           <circle cx={pointX} cy={pointY} r="3.5" fill="#fde047">
             <animate
               attributeName="r"
@@ -130,6 +116,29 @@ export function InternalChamber({
             />
           </circle>
         </g>
+      )}
+
+      {/* Fluorescence return: window point → detector — only while the
+          detector is actually acquiring. */}
+      {detectionOn && (
+        <line
+          x1={pointX}
+          y1={pointY}
+          x2={noseDet.x}
+          y2={noseDet.y}
+          stroke="#22d3ee"
+          strokeWidth="2"
+          strokeLinecap="round"
+          filter="url(#detector-glow)"
+        >
+          <animate
+            attributeName="opacity"
+            values="0.45;0.9;0.45"
+            dur="1.6s"
+            begin="0.2s"
+            repeatCount="indefinite"
+          />
+        </line>
       )}
 
       {/* X-ray tube (upper), nose toward the window */}

@@ -111,6 +111,7 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
     vacuumSensor: num(v?.vacuum_sensor),
     cabinetTemp: num(tp?.cabinet_temperature),
     tubeTemp: num(tp?.tube_temperature),
+    hvOn: g?.hv_on ?? false,
     tubeHighVoltage: num(g?.tube_high_voltage_kv),
     beamCurrent: num(g?.beam_current_ua),
     // Raw equipment value, shown as-is (e.g. "Chamber").
