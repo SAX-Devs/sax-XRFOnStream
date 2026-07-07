@@ -134,10 +134,12 @@ export function FlowLayer({ state }: FlowLayerProps) {
     state.flowRateOut > 0.1 && state.flowRateOut > state.flowRate * 0.05;
 
   // Liquid path: source valves → (pump or bypass) → chamber.
+  // Retro IN (top pipe): the pump pulls liquid FROM the recirculation tank
+  // into the feed line — an inlet source like water/brine.
   const waterFlow = state.waterValve && flowingIn;
   const brineFlow = state.brineValve && flowingIn;
-  const retroOutFlow = state.retroValveOut && flowingIn;
-  const mainFlow = waterFlow || brineFlow || retroOutFlow;
+  const retroInFeedFlow = state.retroValveIn && flowingIn;
+  const mainFlow = waterFlow || brineFlow || retroInFeedFlow;
 
   // Routing around the pump: a STOPPED peristaltic pump BLOCKS the line, so
   // liquid can only cross it when it's running. With the pump stopped and the
@@ -149,7 +151,9 @@ export function FlowLayer({ state }: FlowLayerProps) {
 
   // Drain path: chamber → Outlet Valve → off-screen vent (outlet sensor).
   const drainFlow = state.outletValve && flowingOut;
-  const retroInFlow = state.retroValveIn && flowingOut;
+  // Retro OUT (bottom pipe): with the Outlet Valve closed, the chamber's
+  // outflow returns to the recirculation tank — runs drain → tank (reversed).
+  const retroOutReturnFlow = state.retroValveOut && flowingOut;
 
   return (
     <g className="flow-layer">
@@ -171,10 +175,12 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <path id="flow-bypass-in" d="M 595 165 L 595 108 L 738 108 L 738 198" />
         <path id="flow-bypass-out" d="M 738 225 L 738 240 L 660 240" />
 
-        <path id="flow-retro-out-feed" d="M 160 440 L 200 440" />
-        <path id="flow-retro-out-up" d="M 215 440 L 250 440 L 250 220" />
-        <path id="flow-retro-in-feed" d="M 160 490 L 200 490" />
-        <path id="flow-retro-in-drain" d="M 215 490 L 660 490" />
+        {/* Retro IN (top): tank → up → joins the brine feed line. */}
+        <path id="flow-retro-top-feed" d="M 160 440 L 200 440" />
+        <path id="flow-retro-top-up" d="M 215 440 L 250 440 L 250 220" />
+        {/* Retro OUT (bottom): defined tank→drain; animated REVERSED (drain→tank). */}
+        <path id="flow-retro-bottom-feed" d="M 160 490 L 200 490" />
+        <path id="flow-retro-bottom-drain" d="M 215 490 L 660 490" />
 
         <path id="flow-detector-exit" d="M 660 398 L 660 525" />
         <path id="flow-exit-drain" d="M 660 540 L 660 585" />
@@ -218,18 +224,18 @@ export function FlowLayer({ state }: FlowLayerProps) {
         </>
       )}
 
-      {/* === Retro recirculation (tank → up → joins brine) === */}
-      {retroOutFlow && (
+      {/* === Retro IN (top): the pump pulls from the tank into the feed === */}
+      {retroInFeedFlow && (
         <>
           <Flow
-            pathId="flow-retro-out-feed"
+            pathId="flow-retro-top-feed"
             color={COLORS.retroBrine}
             duration={1.2}
             particleCount={2}
             reverse={reverse}
           />
           <Flow
-            pathId="flow-retro-out-up"
+            pathId="flow-retro-top-up"
             color={COLORS.retroBrine}
             duration={3.5}
             reverse={reverse}
@@ -312,19 +318,22 @@ export function FlowLayer({ state }: FlowLayerProps) {
         </>
       )}
 
-      {/* === Retro-in drain (tank → joins exit drain) === */}
-      {retroInFlow && (
+      {/* === Retro OUT (bottom): chamber outflow returns to the tank ===
+          Runs REVERSED: drain junction → valve → tank. */}
+      {retroOutReturnFlow && (
         <>
           <Flow
-            pathId="flow-retro-in-feed"
+            pathId="flow-retro-bottom-drain"
+            color={COLORS.retroBrine}
+            duration={3.2}
+            reverse
+          />
+          <Flow
+            pathId="flow-retro-bottom-feed"
             color={COLORS.retroBrine}
             duration={1}
             particleCount={2}
-          />
-          <Flow
-            pathId="flow-retro-in-drain"
-            color={COLORS.retroBrine}
-            duration={3.2}
+            reverse
           />
         </>
       )}

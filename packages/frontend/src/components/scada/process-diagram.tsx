@@ -150,24 +150,27 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           label="Brine in Valve"
           tag={t("PV-102")}
         />
-        {/* Retro Valve out — top output of Brine Retro → recirculates UP to Brine pipe */}
-        {/* Labels go ABOVE the valve so PV-103 is not hidden by Retro Valve in below */}
+        {/* Retro Valve IN (top): the pump PULLS liquid from the recirculation
+            tank into the feed line through this valve. Label goes ABOVE so it
+            isn't hidden by the valve below. */}
         <GateValve
           x={207}
           y={440}
-          isOpen={sampleState.retroValveOut}
-          label="Retro Valve out"
-          tag={t("PV-103")}
-          labelPosition="top"
-        />
-
-        {/* Retro Valve in — bottom output of Brine Retro → joins drain at Exit Valve area */}
-        <GateValve
-          x={207}
-          y={490}
           isOpen={sampleState.retroValveIn}
           label="Retro Valve in"
           tag={t("PV-104")}
+          labelPosition="top"
+        />
+
+        {/* Retro Valve OUT (bottom): with the Outlet Valve closed, the flow
+            leaving the analysis chamber returns to the recirculation tank
+            through this valve (chamber drain → tank). */}
+        <GateValve
+          x={207}
+          y={490}
+          isOpen={sampleState.retroValveOut}
+          label="Retro Valve out"
+          tag={t("PV-103")}
         />
 
         {/* === PERISTALTIC PUMP — aligned with Water+Brine merger at y=165 === */}
