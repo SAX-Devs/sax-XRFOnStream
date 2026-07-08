@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SpectrumChart } from "./spectrum-chart";
 import { MeasurementsList } from "./measurements-list";
 import { ConcentrationTable } from "./concentration-table";
+import { ConcentrationTrend } from "./concentration-trend";
 import {
   useMeasurementsList,
   useSpectrum,
@@ -41,6 +42,9 @@ export function MeasurementsScreen({ deviceId }: { deviceId: string }) {
 
   return (
     <div className="space-y-3">
+      {/* Concentration trend — the headline chart, first per SAX's request */}
+      <ConcentrationTrend deviceId={deviceId} />
+
       {/* Date filter */}
       <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 backdrop-blur-md">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
@@ -131,20 +135,8 @@ export function MeasurementsScreen({ deviceId }: { deviceId: string }) {
               </div>
             )}
 
-            {spectrumLoading ? (
-              <div className="rounded-2xl border border-white/10 bg-black/60 px-5 py-10 text-center text-sm text-slate-500 backdrop-blur-md">
-                Cargando espectro…
-              </div>
-            ) : spectrum.length > 0 ? (
-              <SpectrumChart data={spectrum} />
-            ) : (
-              <div className="rounded-2xl border border-white/10 bg-black/60 px-5 py-10 text-center text-sm text-slate-500 backdrop-blur-md">
-                {inStorageOnly
-                  ? "Espectro almacenado en Storage (carga diferida — pendiente)"
-                  : "Sin datos de espectro para esta medición"}
-              </div>
-            )}
-
+            {/* Per-measurement quantified concentration — BEFORE the spectrum
+                (per SAX: what belongs to the selected measurement goes first). */}
             {Object.keys(concentrations).length > 0 ? (
               <ConcentrationTable elements={concentrations} unit="g/L" />
             ) : (
@@ -157,6 +149,20 @@ export function MeasurementsScreen({ deviceId }: { deviceId: string }) {
                     Próximamente
                   </span>
                 </div>
+              </div>
+            )}
+
+            {spectrumLoading ? (
+              <div className="rounded-2xl border border-white/10 bg-black/60 px-5 py-10 text-center text-sm text-slate-500 backdrop-blur-md">
+                Cargando espectro…
+              </div>
+            ) : spectrum.length > 0 ? (
+              <SpectrumChart data={spectrum} />
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-black/60 px-5 py-10 text-center text-sm text-slate-500 backdrop-blur-md">
+                {inStorageOnly
+                  ? "Espectro almacenado en Storage (carga diferida — pendiente)"
+                  : "Sin datos de espectro para esta medición"}
               </div>
             )}
           </div>
