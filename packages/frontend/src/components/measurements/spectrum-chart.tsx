@@ -108,13 +108,17 @@ export function SpectrumChart({ data, height = 320 }: SpectrumChartProps) {
             tick={{ fill: "#94a3b8", fontSize: 10 }}
             tickLine={{ stroke: "#475569" }}
             axisLine={{ stroke: "#334155" }}
+            width={58}
+            tickFormatter={(v: number) =>
+              v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v)
+            }
             label={{
               value: "Cuentas",
               fill: "#64748b",
               fontSize: 11,
               angle: -90,
               position: "insideLeft",
-              offset: 16,
+              offset: -2,
             }}
           />
 
