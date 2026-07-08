@@ -16,10 +16,12 @@
 
 create extension if not exists pg_cron;
 
--- 03:15 UTC daily: delete telemetry older than 3 days.
+-- Hourly: delete telemetry older than 3 days. Hourly (not daily) so the table
+-- size stays flat (~410 MB) instead of sawtoothing up to ~4 days (~530 MB)
+-- between purges and flirting with the 500 MB Free quota.
 select cron.schedule(
   'telemetry-retention-purge',
-  '15 3 * * *',
+  '15 * * * *',
   $$DELETE FROM public.device_telemetry WHERE received_at < now() - interval '3 days'$$
 );
 
