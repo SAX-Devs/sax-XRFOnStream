@@ -219,12 +219,14 @@ export function ConcentrationTrend({ deviceId }: { deviceId: string }) {
                     fontSize: 11,
                   }}
                   labelStyle={{ color: "#94a3b8", marginBottom: 4 }}
-                  formatter={(value: number | string, name: string) => [
-                    `${Number(value).toFixed(4)} g/L`,
-                    ELEMENT_LABEL[name] ?? name,
+                  formatter={(value, name) => [
+                    `${Number(value ?? 0).toFixed(4)} g/L`,
+                    ELEMENT_LABEL[String(name)] ?? String(name),
                   ]}
-                  labelFormatter={(t: number) =>
-                    new Date(t).toLocaleString("es-CL", { hour12: false })
+                  labelFormatter={(label) =>
+                    new Date(Number(label)).toLocaleString("es-CL", {
+                      hour12: false,
+                    })
                   }
                 />
                 {elements.map((el, i) => (
