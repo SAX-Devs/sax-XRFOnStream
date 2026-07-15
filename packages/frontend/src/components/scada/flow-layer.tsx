@@ -189,20 +189,25 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <path id="flow-exit-drain" d="M 660 540 L 660 585" />
       </defs>
 
+      {/* Particle tuning rule: every segment targets ~120 px/s and ~55-75 px
+          between particles (duration ≈ length/120, count ≈ length/65), so the
+          stream reads as ONE uniform river across segment boundaries. */}
+
       {/* === Water flow (tank → merger) === */}
       {waterFlow && (
         <>
           <Flow
             pathId="flow-water-feed"
             color={COLORS.water}
-            duration={1.2}
-            particleCount={2}
+            duration={0.35}
+            particleCount={1}
             reverse={reverse}
           />
           <Flow
             pathId="flow-water-merger"
             color={COLORS.water}
-            duration={2.6}
+            duration={1.4}
+            particleCount={3}
             reverse={reverse}
           />
         </>
@@ -214,14 +219,15 @@ export function FlowLayer({ state }: FlowLayerProps) {
           <Flow
             pathId="flow-brine-feed"
             color={COLORS.brine}
-            duration={1.2}
-            particleCount={2}
+            duration={0.35}
+            particleCount={1}
             reverse={reverse}
           />
           <Flow
             pathId="flow-brine-merger"
             color={COLORS.brine}
-            duration={2.6}
+            duration={1.4}
+            particleCount={3}
             reverse={reverse}
           />
         </>
@@ -233,14 +239,15 @@ export function FlowLayer({ state }: FlowLayerProps) {
           <Flow
             pathId="flow-retro-top-feed"
             color={COLORS.retroBrine}
-            duration={1.2}
-            particleCount={2}
+            duration={0.35}
+            particleCount={1}
             reverse={reverse}
           />
           <Flow
             pathId="flow-retro-top-up"
             color={COLORS.retroBrine}
-            duration={3.5}
+            duration={2.2}
+            particleCount={4}
             reverse={reverse}
           />
           {/* Continue through the shared elbow up to the merger so the route
@@ -248,8 +255,8 @@ export function FlowLayer({ state }: FlowLayerProps) {
           <Flow
             pathId="flow-retro-join-to-merger"
             color={COLORS.retroBrine}
-            duration={2.0}
-            particleCount={3}
+            duration={1.1}
+            particleCount={2}
             reverse={reverse}
           />
         </>
@@ -262,7 +269,8 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <Flow
           pathId="flow-merger-pump"
           color={COLORS.mixed}
-          duration={2.4}
+          duration={2.6}
+          particleCount={5}
           reverse={reverse}
         />
       )}
@@ -270,7 +278,8 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <Flow
           pathId="flow-feed-to-tap"
           color={COLORS.mixed}
-          duration={2.1}
+          duration={2.3}
+          particleCount={4}
           reverse={reverse}
         />
       )}
@@ -281,7 +290,8 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <Flow
           pathId="flow-pump-to-detector"
           color={COLORS.mixed}
-          duration={1.8}
+          duration={1.0}
+          particleCount={2}
           reverse={reverse}
         />
       )}
@@ -289,8 +299,8 @@ export function FlowLayer({ state }: FlowLayerProps) {
         <Flow
           pathId="flow-rejoin-to-chamber"
           color={COLORS.mixed}
-          duration={1.2}
-          particleCount={3}
+          duration={0.6}
+          particleCount={1}
           reverse={reverse}
         />
       )}
@@ -301,13 +311,15 @@ export function FlowLayer({ state }: FlowLayerProps) {
           <Flow
             pathId="flow-bypass-in"
             color={COLORS.mixed}
-            duration={2.2}
+            duration={2.4}
+            particleCount={4}
             reverse={reverse}
           />
           <Flow
             pathId="flow-bypass-out"
             color={COLORS.mixed}
-            duration={1.4}
+            duration={0.8}
+            particleCount={2}
             reverse={reverse}
           />
         </>
@@ -319,13 +331,14 @@ export function FlowLayer({ state }: FlowLayerProps) {
           <Flow
             pathId="flow-detector-exit"
             color={COLORS.drain}
-            duration={2.6}
+            duration={1.1}
+            particleCount={2}
           />
           <Flow
             pathId="flow-exit-drain"
             color={COLORS.drain}
-            duration={1.2}
-            particleCount={2}
+            duration={0.4}
+            particleCount={1}
           />
         </>
       )}
@@ -337,14 +350,15 @@ export function FlowLayer({ state }: FlowLayerProps) {
           <Flow
             pathId="flow-retro-bottom-drain"
             color={COLORS.retroBrine}
-            duration={3.2}
+            duration={3.7}
+            particleCount={6}
             reverse
           />
           <Flow
             pathId="flow-retro-bottom-feed"
             color={COLORS.retroBrine}
-            duration={1}
-            particleCount={2}
+            duration={0.35}
+            particleCount={1}
             reverse
           />
         </>
