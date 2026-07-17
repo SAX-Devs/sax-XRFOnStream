@@ -51,14 +51,35 @@ export interface ScadaDiagramState {
   flowRateOut: number;
 }
 
+/** Modules that can be rendered as clickable action targets (Operator screen).
+ * Grows module by module as the operator rollout advances. */
+export type ActionableModule = "interchanger";
+
+/** Clickable region per actionable module (diagram viewBox coordinates). */
+const MODULE_HOTSPOTS: Record<
+  ActionableModule,
+  { x: number; y: number; width: number; height: number }
+> = {
+  // Interchanger arm + analysis chamber area.
+  interchanger: { x: 556, y: 300, width: 182, height: 106 },
+};
+
 interface ProcessDiagramProps {
   /** Live diagram state, mapped from telemetry by useScadaTelemetry. */
   state: ScadaDiagramState;
   /** Whether to render P&ID tags (TK-101, PV-101, etc.). Default off; the Service screen turns it on. */
   showTags?: boolean;
+  /** Modules rendered with a clickable hotspot (halo on hover + pulsing dot). */
+  actionableModules?: ActionableModule[];
+  onModuleClick?: (module: ActionableModule) => void;
 }
 
-export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps) {
+export function ProcessDiagram({
+  state,
+  showTags = false,
+  actionableModules,
+  onModuleClick,
+}: ProcessDiagramProps) {
   // Helper: returns the tag string only when tags are enabled, undefined otherwise
   const t = (tag: string) => (showTags ? tag : undefined);
 
@@ -325,6 +346,48 @@ export function ProcessDiagram({ state, showTags = false }: ProcessDiagramProps)
           labelPosition="right"
           orientation="vertical"
         />
+
+        {/* === ACTIONABLE HOTSPOTS (Operator screen) ===
+            Top layer: a dashed halo marks each module the operator can act on;
+            clicking focuses the module's action cards in the Opciones panel. */}
+        {actionableModules?.map((module) => {
+          const h = MODULE_HOTSPOTS[module];
+          if (!h) return null;
+          return (
+            <g
+              key={module}
+              onClick={() => onModuleClick?.(module)}
+              className="cursor-pointer"
+            >
+              <rect
+                x={h.x}
+                y={h.y}
+                width={h.width}
+                height={h.height}
+                rx={10}
+                strokeWidth={1.2}
+                strokeDasharray="6 4"
+                className="fill-transparent stroke-cyan-400/25 transition-all duration-300 hover:fill-cyan-400/[0.05] hover:stroke-cyan-300/80"
+              >
+                <title>Módulo accionable — clic para ver opciones</title>
+              </rect>
+              {/* Pulsing "actionable" beacon at the hotspot corner */}
+              <circle
+                cx={h.x + 9}
+                cy={h.y + 9}
+                r={3}
+                className="pointer-events-none fill-cyan-400"
+              >
+                <animate
+                  attributeName="opacity"
+                  values="1;0.2;1"
+                  dur="2.2s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+            </g>
+          );
+        })}
 
       </svg>
     </div>

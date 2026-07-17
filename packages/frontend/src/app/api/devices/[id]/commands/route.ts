@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { signCommand } from "@/lib/hmac/sign";
 import { publishToMqtt } from "@/lib/emqx/publish";
 import { hasMinimumRole } from "@/constants/roles";
+import { buildOperatorArgs } from "@/constants/operator-actions";
 import type { UserRole } from "@/types/auth";
 
 interface CommandBody {
@@ -50,6 +51,21 @@ export async function POST(
       { error: "module and command are required" },
       { status: 400 }
     );
+  }
+
+  // Per-action authorization: OPERATORS may only fire actions from the
+  // explicit catalog, with validated arg1 and server-forced extra args
+  // (timeouts). Higher roles (service+) pass through — the gateway's own
+  // whitelist still gates everything on the equipment side.
+  if (role === "operator") {
+    const args = buildOperatorArgs(body.module, body.command, body.args?.arg1);
+    if (!args) {
+      return NextResponse.json(
+        { error: "Acción no permitida para el rol operario" },
+        { status: 403 }
+      );
+    }
+    body.args = args;
   }
 
   const tenantId = profile?.tenant_id ?? "";
