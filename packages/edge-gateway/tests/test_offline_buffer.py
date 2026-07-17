@@ -44,7 +44,7 @@ def test_buffer_persists_after_restart(mock_connect, mock_path, mock_local_db_co
 @patch("src.offline_buffer.Path")
 @patch("src.offline_buffer.psycopg.connect")
 def test_buffer_order_by_timestamp(mock_connect, mock_path, mock_local_db_config):
-    """Drain query orders messages by created_at ASC."""
+    """Drain query returns messages oldest-first (id is insert-ordered)."""
     mock_path.return_value.read_text.return_value = "testpassword"
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
@@ -57,4 +57,4 @@ def test_buffer_order_by_timestamp(mock_connect, mock_path, mock_local_db_config
     buffer.drain()
 
     select_call = mock_cursor.execute.call_args_list[-1]
-    assert "ORDER BY created_at ASC" in select_call[0][0]
+    assert "ORDER BY id ASC" in select_call[0][0]

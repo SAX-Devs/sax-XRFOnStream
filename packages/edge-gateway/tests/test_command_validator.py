@@ -144,6 +144,117 @@ def test_missing_expires_at_rejected(validator):
     assert result.ok is False
 
 
+def test_cam_interchange_valid_positions(validator):
+    for i, position in enumerate(("Chamber", "Recal")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-cam-{i}",
+            module="interchanger",
+            command="cam_interchange",
+            args={"arg1": position},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, result.reason
+        # Reset the rate limiter between iterations.
+        validator._last_command_times.clear()
+
+
+def test_cam_interchange_invalid_position_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-cam-bad",
+        module="interchanger",
+        command="cam_interchange",
+        args={"arg1": "Sideways"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_cam_interchange_missing_arg_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-cam-noarg",
+        module="interchanger",
+        command="cam_interchange",
+        args={},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "Missing required argument" in result.reason
+
+
+def test_usage_axial_valid(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-axial",
+        module="interchanger",
+        command="usage_axial",
+        args={"arg1": "true", "arg2": "5"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_usage_rot_valid(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-rot",
+        module="interchanger",
+        command="usage_rot",
+        args={"arg1": "false", "arg2": "20"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_usage_axial_bad_bool_rejected(validator):
+    # 'True' (capitalized) is NOT allowed — args travel verbatim and the UI
+    # always sends lowercase; anything else is suspicious.
+    cmd = _make_valid_command(
+        command_id="cmd-axial-bad",
+        module="interchanger",
+        command="usage_axial",
+        args={"arg1": "True", "arg2": "5"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_usage_axial_missing_timeout_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-axial-noto",
+        module="interchanger",
+        command="usage_axial",
+        args={"arg1": "true"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "Missing required argument" in result.reason
+
+
+def test_usage_rot_timeout_out_of_range_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-rot-to",
+        module="interchanger",
+        command="usage_rot",
+        args={"arg1": "true", "arg2": "9999"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "out of range" in result.reason.lower()
+
+
+def test_lock_control_no_longer_whitelisted(validator):
+    # Planned-era command that doesn't exist on the real equipment.
+    cmd = _make_valid_command(
+        command_id="cmd-lock",
+        module="interchanger",
+        command="lock_control",
+        args={},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "whitelist" in result.reason.lower()
+
+
 def test_sentinel_ok_allows_command(validator, mock_db_reader):
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},

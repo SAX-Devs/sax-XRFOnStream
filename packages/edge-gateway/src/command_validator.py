@@ -18,7 +18,10 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
     "generator": ["set_hv_state", "set_voltage_and_current", "power"],
     "vacuum": ["set_atmospheric_condition", "pump_control", "valve_control"],
     "circulation": ["pump_control", "valve_control"],
-    "interchanger": ["cam_interchange", "lock_control"],
+    # Reconciled with the real interchanger_action catalog (operator subset).
+    # The equipment declares python_data_type per task: cam_interchange {str},
+    # usage_axial/usage_rot {bool,int} — see ARGUMENT_ENUMS/REQUIRED_ARGS.
+    "interchanger": ["cam_interchange", "usage_axial", "usage_rot"],
     "detector": ["set_detector", "set_gain", "set_threshold"],
     "temp_control": ["set_target_temperature", "valve_control"],
     "auxiliary": ["battery_test"],
@@ -38,6 +41,32 @@ ARGUMENT_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "set_threshold": {
         "threshold": (1, 1000),
     },
+    # arg2 = task timeout in seconds (equipment defaults: axial 5, rot 20).
+    "usage_axial": {
+        "arg2": (1, 30),
+    },
+    "usage_rot": {
+        "arg2": (1, 60),
+    },
+}
+
+# Enum-valued positional args, sent verbatim to the equipment's command table.
+# Booleans must be the strings 'true'/'false' (the CommandDaemon's
+# DataTransformer accepts them case-insensitively); cam_interchange takes the
+# literal position names (case-sensitive on the equipment side).
+ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
+    "cam_interchange": {"arg1": ("Chamber", "Recal")},
+    "usage_axial": {"arg1": ("true", "false")},
+    "usage_rot": {"arg1": ("true", "false")},
+}
+
+# The equipment's DataTransformer raises when the arg count doesn't match the
+# task's declared python_data_type, so missing args must be rejected here
+# instead of failing (as a task error) on the equipment.
+REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
+    "cam_interchange": ("arg1",),
+    "usage_axial": ("arg1", "arg2"),
+    "usage_rot": ("arg1", "arg2"),
 }
 
 RATE_LIMITS: dict[tuple[str, str], float] = {
@@ -46,6 +75,8 @@ RATE_LIMITS: dict[tuple[str, str], float] = {
     ("generator", "power"): 10.0,
     ("vacuum", "set_atmospheric_condition"): 5.0,
     ("interchanger", "cam_interchange"): 10.0,
+    ("interchanger", "usage_axial"): 5.0,
+    ("interchanger", "usage_rot"): 5.0,
 }
 
 SENTINEL_BLOCKING_RULES: dict[str, list[str]] = {
@@ -109,6 +140,8 @@ class CommandValidator:
             self._check_expiration,
             self._check_replay,
             self._check_whitelist,
+            self._check_required_args,
+            self._check_argument_enums,
             self._check_argument_ranges,
             self._check_rate_limit,
             self._check_sentinel_conditions,
@@ -168,6 +201,37 @@ class CommandValidator:
                 ok=False,
                 reason=f"Command {command.module}.{command.command} not in whitelist",
             )
+        return ValidationResult(ok=True)
+
+    def _check_required_args(self, command: CommandPayload) -> ValidationResult:
+        """Reject commands missing args their task declares as mandatory."""
+        required = REQUIRED_ARGS.get(command.command, ())
+        for arg_name in required:
+            value = command.args.get(arg_name)
+            if value is None or str(value) == "":
+                return ValidationResult(
+                    ok=False,
+                    reason=f"Missing required argument {arg_name} for {command.command}",
+                )
+        return ValidationResult(ok=True)
+
+    def _check_argument_enums(self, command: CommandPayload) -> ValidationResult:
+        """Validate enum-valued args against their exact allowed values."""
+        enums = ARGUMENT_ENUMS.get(command.command)
+        if not enums:
+            return ValidationResult(ok=True)
+
+        for arg_name, allowed in enums.items():
+            if arg_name in command.args:
+                value = str(command.args[arg_name])
+                if value not in allowed:
+                    return ValidationResult(
+                        ok=False,
+                        reason=(
+                            f"Argument {arg_name}='{value}' not allowed for "
+                            f"{command.command} (expected one of {list(allowed)})"
+                        ),
+                    )
         return ValidationResult(ok=True)
 
     def _check_argument_ranges(self, command: CommandPayload) -> ValidationResult:
