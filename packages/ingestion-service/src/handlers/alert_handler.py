@@ -25,6 +25,9 @@ _SEVERITY_MAP = {
     "ok": "info",
     "info": "info",
     "warning": "warning",
+    # The equipment's module sentinel SPs use OK/warning/alarm as their scale;
+    # `alarm` is their top severity (raw value preserved in detail.raw_severity).
+    "alarm": "critical",
     "critical": "critical",
     "emergency": "emergency",
 }
