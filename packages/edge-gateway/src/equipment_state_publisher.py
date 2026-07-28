@@ -27,14 +27,17 @@ class EquipmentStatePublisher:
 
     def infer_state(self) -> tuple[str, dict]:
         """Infer global equipment state from local DB tables."""
+        # Validations come from the per-module <module>_sentinel tables,
+        # consolidated by sp_sentinel_view() (the legacy validations_sentinel
+        # table no longer exists). The module SPs use OK/warning/alarm.
         try:
-            sentinel_rows = self._db.read_table("validations_sentinel")
+            sentinel_rows = self._db.read_table("sp_sentinel_view()")
         except Exception:
             return ("unknown", {})
 
         for row in sentinel_rows:
-            if row.get("severity", "OK").upper() in ("CRITICAL", "EMERGENCY"):
-                return ("error", {"alerts": [{"name": row["name"], "severity": row["severity"]}]})
+            if row.get("severity", "OK").upper() in ("CRITICAL", "EMERGENCY", "ALARM"):
+                return ("error", {"alerts": [{"name": row["validation_name"], "severity": row["severity"]}]})
 
         try:
             busy_tasks = self._db.read_table("current_busy_tasks")

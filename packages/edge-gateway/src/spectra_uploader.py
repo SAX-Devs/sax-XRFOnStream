@@ -65,7 +65,7 @@ class SpectraUploader:
             # on. Sweeping months of historical spectra in one go is what froze
             # the device (2026-07-02) — the backlog is deliberately skipped.
             try:
-                self._last_uploaded_id = self._db.read_max_id("spectras", "id")
+                self._last_uploaded_id = self._db.read_max_id("spectras", "index")
             except Exception:
                 logger.exception("Failed to initialize last spectra id")
                 return
@@ -78,7 +78,7 @@ class SpectraUploader:
 
         try:
             rows = self._db.read_rows_after(
-                "spectras", "id", self._last_uploaded_id, limit=BATCH_SIZE
+                "spectras", "index", self._last_uploaded_id, limit=BATCH_SIZE
             )
         except Exception:
             logger.exception("Failed to read spectras table")
@@ -88,12 +88,13 @@ class SpectraUploader:
             # The equipment's `spectras` table holds the spectrum in the `spectrum`
             # int[] column and the run metadata in separate columns — build the
             # cloud payload from those. The frontend (toSpectrum / runField)
-            # consumes {spectrum:[...]} and these run_data keys.
+            # consumes {spectrum:[...]} and these run_data keys. Its primary key
+            # is `index` (repo schema), not `id`.
             spectrum = row.get("spectrum")
             payload = {
                 "device_id": self._config.device_id,
                 "ts": datetime.now(timezone.utc).isoformat(),
-                "measurement_id": str(row.get("sample_id") or row.get("id", "")),
+                "measurement_id": str(row.get("sample_id") or row.get("index", "")),
                 "spectra_data": {"spectrum": spectrum} if spectrum is not None else None,
                 "run_data": {
                     "livetime": row.get("livetime"),
@@ -106,7 +107,7 @@ class SpectraUploader:
                 },
             }
             self._mqtt.publish(self._topic, json.dumps(payload, default=str).encode())
-            self._last_uploaded_id = max(self._last_uploaded_id, row["id"])
+            self._last_uploaded_id = max(self._last_uploaded_id, row["index"])
 
         if rows:
             self._save_last_id()

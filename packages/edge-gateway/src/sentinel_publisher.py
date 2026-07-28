@@ -27,18 +27,29 @@ class SentinelPublisher:
         self._alerts_topic = f"sax/{config.tenant_id}/{config.device_id}/alerts"
 
     def _tick(self) -> None:
+        # Validations live in the per-module <module>_sentinel tables; the
+        # equipment consolidates them via the sp_sentinel_view() function
+        # (the legacy global validations_sentinel table no longer exists).
         try:
-            rows = self._db.read_table("validations_sentinel")
+            rows = self._db.read_table("sp_sentinel_view()")
         except Exception:
-            logger.exception("Failed to read validations_sentinel")
+            logger.exception("Failed to read sp_sentinel_view()")
             return
+
+        # Cold start: an empty cache would make every validation look "changed"
+        # and flood the cloud with one alert per validation on each restart.
+        # Baseline the OK ones silently; only active (non-OK) states are worth
+        # announcing when the gateway comes up.
+        first_run = not self._last_severities
 
         changed_alerts = []
         for row in rows:
-            name = row["name"]
+            name = row["validation_name"]
             severity = row.get("severity", "OK")
             if severity != self._last_severities.get(name):
                 self._last_severities[name] = severity
+                if first_run and severity.upper() == "OK":
+                    continue
                 changed_alerts.append({
                     "name": name,
                     "severity": severity,
@@ -58,9 +69,11 @@ class SentinelPublisher:
         payload_bytes = json.dumps(payload, default=str).encode()
         self._mqtt.publish(self._sentinel_topic, payload_bytes)
 
+        # The module sentinel SPs use OK/warning/alarm as their scale — alarm is
+        # the top severity there, alongside the legacy critical/emergency.
         critical_alerts = [
             a for a in changed_alerts
-            if a["severity"].lower() in ("critical", "emergency")
+            if a["severity"].lower() in ("critical", "emergency", "alarm")
         ]
         if critical_alerts:
             alert_payload = {
