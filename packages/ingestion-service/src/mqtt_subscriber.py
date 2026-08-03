@@ -27,11 +27,15 @@ from src.topic_router import ParsedTopic, TopicKind, parse_topic
 logger = logging.getLogger("ingestion-service.mqtt")
 
 
+# Deliberately NOT subscribed: ``sax/+/+/alerts``. The gateway publishes every
+# severity change to ``sentinel`` and re-publishes the critical ones to
+# ``alerts`` as a promotion channel for future notification consumers. Ingesting
+# both stored each alarm twice (observed 2026-07-28); ``sentinel`` alone is the
+# complete history.
 _SUBSCRIPTIONS: tuple[tuple[str, int], ...] = (
     ("sax/+/+/telemetry/+", 1),
     ("sax/+/+/spectra", 1),
     ("sax/+/+/concentrations", 1),
-    ("sax/+/+/alerts", 1),
     ("sax/+/+/sentinel", 1),
     ("sax/+/+/equipment_state", 1),
     ("sax/+/+/command/ack", 1),

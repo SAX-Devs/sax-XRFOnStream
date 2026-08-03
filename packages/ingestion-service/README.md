@@ -89,11 +89,14 @@ The service accepts `INGESTION_*` prefixed variants too (e.g. `INGESTION_MQTT_PA
 | `sax/+/+/telemetry/+` | telemetry | `device_telemetry` | INSERT |
 | `sax/+/+/spectra` | spectra | `device_spectra` (+ Storage) | INSERT |
 | `sax/+/+/concentrations` | concentrations | `device_concentrations` | INSERT |
-| `sax/+/+/alerts` | alert | `alerts` | INSERT |
 | `sax/+/+/sentinel` | alert | `alerts` | INSERT |
 | `sax/+/+/equipment_state` | equipment_state | `device_equipment_state` | UPSERT (PK `device_id`) |
 | `sax/+/+/command/ack` | command_audit | `command_audit` | UPDATE |
 | `sax/+/+/command/result` | command_audit | `command_audit` | UPDATE |
+
+`sax/+/+/alerts` is **not** subscribed: the gateway re-publishes critical
+severities there as a promotion channel for notification consumers, but
+`sentinel` already carries every change. Ingesting both stored each alarm twice.
 
 Every successful insert/upsert/update also bumps `devices.last_seen_at = now()`.
 

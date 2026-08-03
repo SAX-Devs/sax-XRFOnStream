@@ -35,18 +35,19 @@ logger = logging.getLogger("ingestion-service")
 def _build_handlers(ctx: HandlerContext) -> dict[TopicKind, Handler]:
     """Map every recognised topic kind to a handler instance.
 
-    The alert handler serves both ``alerts`` and ``sentinel`` topics; the
-    command audit handler serves both ``ack`` and ``result``. Single source
+    The command audit handler serves both ``ack`` and ``result``. Single source
     of truth for topic-to-handler routing.
+
+    ``TopicKind.ALERTS`` is intentionally unmapped: ``sentinel`` already carries
+    every severity change, while ``alerts`` only re-publishes the critical ones
+    for notification consumers. Handling both stored each alarm twice.
     """
-    alert = AlertHandler(ctx)
     command_audit = CommandAuditHandler(ctx)
     return {
         TopicKind.TELEMETRY: TelemetryHandler(ctx),
         TopicKind.SPECTRA: SpectraHandler(ctx),
         TopicKind.CONCENTRATIONS: ConcentrationsHandler(ctx),
-        TopicKind.ALERTS: alert,
-        TopicKind.SENTINEL: alert,
+        TopicKind.SENTINEL: AlertHandler(ctx),
         TopicKind.EQUIPMENT_STATE: EquipmentStateHandler(ctx),
         TopicKind.COMMAND_ACK: command_audit,
         TopicKind.COMMAND_RESULT: command_audit,
