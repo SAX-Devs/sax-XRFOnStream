@@ -72,6 +72,13 @@ export function OperatorScreen({
     setFocusSignal((n) => n + 1);
   }
 
+  // The Opciones panel scrolls INSIDE itself, so its height must stop at the
+  // viewport bottom. Offset = 56px top nav + 24px main padding + 24px bottom
+  // breathing room, plus any banner currently pushing the row down (each is
+  // ~46px tall + the 12px grid gap).
+  const bannerCount = (provisioned ? 0 : 1) + (dataStale ? 1 : 0);
+  const panelMaxHeight = `calc(100vh - ${104 + bannerCount * 58}px)`;
+
   const i = interchanger.data;
   const c = circulation.data;
 
@@ -104,27 +111,24 @@ export function OperatorScreen({
         </Banner>
       )}
 
-      {/* No `items-start` here on purpose: the diagram's cell must stretch to
-          the row height (set by the taller Opciones panel) so the sticky
-          wrapper inside it has room to travel. */}
-      <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-3">
-        {/* Center — live process diagram with actionable hotspots.
-            Pinned below the 56px top nav: while an action runs, the operator
-            scrolls the Opciones panel to follow the stepper WITHOUT losing
-            sight of the equipment — the diagram is where the order's real
-            effect shows up. */}
-        <div>
-          <div className="sticky top-[68px]">
-            <ProcessDiagram
-              state={diagram}
-              actionableModules={MODULES.map((m) => m.key)}
-              onModuleClick={focusModule}
-            />
-          </div>
-        </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_440px] items-start gap-3">
+        {/* Center — live process diagram with actionable hotspots */}
+        <ProcessDiagram
+          state={diagram}
+          actionableModules={MODULES.map((m) => m.key)}
+          onModuleClick={focusModule}
+        />
 
-        {/* Right — Opciones panel (accordion, one module open at a time) */}
-        <div className="space-y-2 self-start">
+        {/* Right — Opciones panel (accordion, one module open at a time).
+            The panel is its OWN scroll container, capped at the viewport
+            bottom: the wheel over the cards moves only the cards, so the
+            diagram never leaves the screen while an action runs (that's where
+            the order's real effect shows up). `overscroll-contain` stops the
+            scroll from chaining to the page once the panel hits its end. */}
+        <div
+          style={{ maxHeight: panelMaxHeight }}
+          className="space-y-2 overflow-y-auto overscroll-contain pr-1 [scrollbar-color:rgba(148,163,184,0.3)_transparent] [scrollbar-width:thin]"
+        >
           <div className="rounded-2xl border border-white/10 bg-black/60 px-4 py-3 backdrop-blur-md">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.7)]" />
