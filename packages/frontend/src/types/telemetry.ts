@@ -73,7 +73,7 @@ export interface CirculationData {
   recirculation_out_valve: boolean;
   pump_forward: boolean;
   pump_reverse: boolean;
-  power_state: boolean;
+  power_status: boolean;
   tank_fill_sensor: boolean;
   tank_level_ok: boolean;
   tank_filled: boolean;

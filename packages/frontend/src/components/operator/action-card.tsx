@@ -9,8 +9,13 @@ export interface ActionOption {
   value: string;
   label: string;
   hint?: string;
-  /** The equipment already reports this state — selectable but pointless. */
+  /** The equipment already reports this state — shown as current, not firable. */
   isCurrent?: boolean;
+  /**
+   * Disables the option for a reason other than "already there" (e.g. no tank
+   * capacity left). The reason replaces the hint so the operator sees WHY.
+   */
+  disabledReason?: string;
 }
 
 export type StateTone = "ok" | "info" | "moving" | "warn" | "unknown";
@@ -34,6 +39,17 @@ interface ActionCardProps {
   /** Soft precondition warning (equipment still verifies on its side). */
   warning?: string | null;
   options: ActionOption[];
+  /** Option grid columns — use 1 for single-action cards. Default 2. */
+  optionColumns?: 1 | 2;
+  /** Hint shown on the option the equipment already reports. */
+  currentHint?: string;
+  /** Shown next to the options for actions that take minutes to run. */
+  longRunNote?: string;
+  /**
+   * Live progress for long-running actions (e.g. the tank level rising),
+   * rendered under the stepper while the action is still executing.
+   */
+  progress?: React.ReactNode;
   /** In-flight action on THIS card's command (drives the stepper). */
   inflight: InflightAction | null;
   /** Label of another action keeping the module busy, if any. */
@@ -54,6 +70,10 @@ export function ActionCard({
   requirement,
   warning,
   options,
+  optionColumns = 2,
+  currentHint = "estado actual",
+  longRunNote,
+  progress,
   inflight,
   lockedBy,
   disabled = false,
@@ -147,6 +167,11 @@ export function ActionCard({
               )}
             </div>
             <ActionStepper stage={inflight.stage} />
+            {/* Live progress for minutes-long actions — the operator watches
+                the equipment actually working, not just a spinner. */}
+            {progress && running && (
+              <div className="mt-3 border-t border-white/5 pt-2.5">{progress}</div>
+            )}
           </div>
 
           {inflight.stage === "timeout" && (
@@ -191,11 +216,17 @@ export function ActionCard({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div
+              className={`grid gap-2 ${
+                optionColumns === 1 ? "grid-cols-1" : "grid-cols-2"
+              }`}
+            >
               {options.map((opt) => (
                 <button
                   key={opt.value}
-                  disabled={interactionBlocked || opt.isCurrent}
+                  disabled={
+                    interactionBlocked || opt.isCurrent || !!opt.disabledReason
+                  }
                   onClick={() => setPendingOption(opt)}
                   className={`group rounded-xl border px-3 py-2 text-left transition-all ${
                     opt.isCurrent
@@ -211,11 +242,19 @@ export function ActionCard({
                     {opt.label}
                   </span>
                   <span className="mt-0.5 block text-[9px] leading-snug text-slate-500">
-                    {opt.isCurrent ? "posición actual" : opt.hint}
+                    {opt.disabledReason ??
+                      (opt.isCurrent ? currentHint : opt.hint)}
                   </span>
                 </button>
               ))}
             </div>
+          )}
+
+          {longRunNote && !pendingOption && (
+            <p className="mt-2 text-[10px] leading-snug text-slate-500">
+              <span className="mr-1 text-slate-400">⏱</span>
+              {longRunNote}
+            </p>
           )}
 
           {lockedBy && (

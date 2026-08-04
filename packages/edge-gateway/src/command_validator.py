@@ -17,7 +17,11 @@ logger = logging.getLogger("edge-gateway.command-validator")
 COMMAND_WHITELIST: dict[str, list[str]] = {
     "generator": ["set_hv_state", "set_voltage_and_current", "power"],
     "vacuum": ["set_atmospheric_condition", "pump_control", "valve_control"],
-    "circulation": ["pump_control", "valve_control"],
+    # Reconciled with the real circulation_action catalog (operator subset).
+    # The previous entries (pump_control/valve_control) were planned-era names
+    # that don't exist on the equipment — the real tasks are set_pump_state,
+    # set_valve_state, set_operation_mode, tank_percentage_fill, empty_tank…
+    "circulation": ["set_operation_mode", "tank_percentage_fill", "empty_tank"],
     # Reconciled with the real interchanger_action catalog (operator subset).
     # The equipment declares python_data_type per task: cam_interchange {str},
     # usage_axial/usage_rot {bool,int} — see ARGUMENT_ENUMS/REQUIRED_ARGS.
@@ -48,6 +52,11 @@ ARGUMENT_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "usage_rot": {
         "arg2": (1, 60),
     },
+    # Relative amount to add to the tank level; the equipment itself rejects
+    # anything outside 0-100 (as a silent no-op), so bound it here.
+    "tank_percentage_fill": {
+        "arg1": (0, 100),
+    },
 }
 
 # Enum-valued positional args, sent verbatim to the equipment's command table.
@@ -58,6 +67,19 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
     "cam_interchange": {"arg1": ("Chamber", "Recal")},
     "usage_axial": {"arg1": ("true", "false")},
     "usage_rot": {"arg1": ("true", "false")},
+    # The 7 branches of Circulation.set_operation_mode; any other value falls
+    # through every branch and silently does nothing.
+    "set_operation_mode": {
+        "arg1": (
+            "Closed",
+            "Brine",
+            "Water",
+            "Recirculation",
+            "Purge",
+            "Sample_taking",
+            "Pump_Cleaning",
+        )
+    },
 }
 
 # The equipment's DataTransformer raises when the arg count doesn't match the
@@ -67,6 +89,14 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "cam_interchange": ("arg1",),
     "usage_axial": ("arg1", "arg2"),
     "usage_rot": ("arg1", "arg2"),
+    "set_operation_mode": ("arg1",),
+    "tank_percentage_fill": ("arg1",),
+}
+
+# Tasks whose declared python_data_type is {None}: the equipment's transformer
+# raises on ANY argument, so reject commands that carry one.
+NO_ARG_COMMANDS: dict[str, tuple[str, ...]] = {
+    "circulation": ("empty_tank",),
 }
 
 RATE_LIMITS: dict[tuple[str, str], float] = {
@@ -77,6 +107,11 @@ RATE_LIMITS: dict[tuple[str, str], float] = {
     ("interchanger", "cam_interchange"): 10.0,
     ("interchanger", "usage_axial"): 5.0,
     ("interchanger", "usage_rot"): 5.0,
+    # Mode changes actuate five valves + the pump; the tank actions run for
+    # minutes, so re-firing them quickly is always a mistake.
+    ("circulation", "set_operation_mode"): 5.0,
+    ("circulation", "tank_percentage_fill"): 15.0,
+    ("circulation", "empty_tank"): 15.0,
 }
 
 SENTINEL_BLOCKING_RULES: dict[str, list[str]] = {
@@ -204,7 +239,22 @@ class CommandValidator:
         return ValidationResult(ok=True)
 
     def _check_required_args(self, command: CommandPayload) -> ValidationResult:
-        """Reject commands missing args their task declares as mandatory."""
+        """Reject commands whose args don't match what the task declares."""
+        if command.command in NO_ARG_COMMANDS.get(command.module, ()):
+            supplied = [
+                name
+                for name, value in command.args.items()
+                if value is not None and str(value) != ""
+            ]
+            if supplied:
+                return ValidationResult(
+                    ok=False,
+                    reason=(
+                        f"{command.command} takes no arguments, got {supplied}"
+                    ),
+                )
+            return ValidationResult(ok=True)
+
         required = REQUIRED_ARGS.get(command.command, ())
         for arg_name in required:
             value = command.args.get(arg_name)

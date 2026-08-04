@@ -18,8 +18,12 @@
  */
 
 export interface OperatorActionRule {
-  /** Allowed arg1 values, sent verbatim to the equipment. */
-  arg1: readonly string[];
+  /**
+   * Allowed arg1 values, sent verbatim to the equipment. `null` means the
+   * action takes NO arguments — the equipment's transformer raises on any arg
+   * for a task whose declared type is {None}, so nothing may be sent.
+   */
+  arg1: readonly string[] | null;
   /**
    * Fixed args appended server-side (e.g. the task timeout in seconds).
    * The equipment's type transformer errors on arg-count mismatch, so these
@@ -41,6 +45,27 @@ export const OPERATOR_ACTIONS: Record<
     // usage_rot(target: bool, timeout: int=20) — large piston UP/DOWN.
     usage_rot: { arg1: ["true", "false"], fixedArgs: { arg2: "20" } },
   },
+  circulation: {
+    // set_operation_mode(mode: str) — the 7 branches of
+    // Circulation.set_operation_mode; anything else is a silent no-op.
+    set_operation_mode: {
+      arg1: [
+        "Closed",
+        "Brine",
+        "Water",
+        "Recirculation",
+        "Purge",
+        "Sample_taking",
+        "Pump_Cleaning",
+      ],
+    },
+    // tank_percentage_fill(percentage: float) — RELATIVE amount to add.
+    // Restricted to the presets the operator UI offers; 100 = fill until the
+    // tank-full sensor trips.
+    tank_percentage_fill: { arg1: ["10", "25", "50", "100"] },
+    // empty_tank() — takes no arguments ({None}).
+    empty_tank: { arg1: null },
+  },
 };
 
 /**
@@ -55,6 +80,11 @@ export function buildOperatorArgs(
 ): Record<string, string> | null {
   const rule = OPERATOR_ACTIONS[module]?.[command];
   if (!rule) return null;
+  // Zero-argument action: reject any attempt to smuggle args in.
+  if (rule.arg1 === null) {
+    if (arg1 !== undefined && arg1 !== null && String(arg1) !== "") return null;
+    return { ...rule.fixedArgs };
+  }
   const value = String(arg1 ?? "");
   if (!rule.arg1.includes(value)) return null;
   return { arg1: value, ...rule.fixedArgs };

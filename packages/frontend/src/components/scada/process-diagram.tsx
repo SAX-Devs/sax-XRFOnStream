@@ -53,7 +53,7 @@ export interface ScadaDiagramState {
 
 /** Modules that can be rendered as clickable action targets (Operator screen).
  * Grows module by module as the operator rollout advances. */
-export type ActionableModule = "interchanger";
+export type ActionableModule = "interchanger" | "circulation";
 
 /** Clickable region per actionable module (diagram viewBox coordinates). */
 const MODULE_HOTSPOTS: Record<
@@ -62,6 +62,9 @@ const MODULE_HOTSPOTS: Record<
 > = {
   // Interchanger arm + analysis chamber area.
   interchanger: { x: 556, y: 300, width: 182, height: 106 },
+  // Recirculation tank + its two retro valves — where the operator's
+  // circulation actions (fill / empty / operation mode) take effect.
+  circulation: { x: 36, y: 410, width: 226, height: 118 },
 };
 
 interface ProcessDiagramProps {

@@ -255,6 +255,114 @@ def test_lock_control_no_longer_whitelisted(validator):
     assert "whitelist" in result.reason.lower()
 
 
+def test_set_operation_mode_valid_modes(validator):
+    modes = (
+        "Closed",
+        "Brine",
+        "Water",
+        "Recirculation",
+        "Purge",
+        "Sample_taking",
+        "Pump_Cleaning",
+    )
+    for i, mode in enumerate(modes):
+        cmd = _make_valid_command(
+            command_id=f"cmd-mode-{i}",
+            module="circulation",
+            command="set_operation_mode",
+            args={"arg1": mode},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{mode}: {result.reason}"
+        validator._last_command_times.clear()
+
+
+def test_set_operation_mode_invalid_mode_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-mode-bad",
+        module="circulation",
+        command="set_operation_mode",
+        args={"arg1": "Recirculacion"},  # missing accent handling / wrong name
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_tank_percentage_fill_valid(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-fill",
+        module="circulation",
+        command="tank_percentage_fill",
+        args={"arg1": "25"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_tank_percentage_fill_out_of_range_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-fill-bad",
+        module="circulation",
+        command="tank_percentage_fill",
+        args={"arg1": "150"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "out of range" in result.reason.lower()
+
+
+def test_tank_percentage_fill_missing_arg_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-fill-noarg",
+        module="circulation",
+        command="tank_percentage_fill",
+        args={},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "Missing required argument" in result.reason
+
+
+def test_empty_tank_valid_without_args(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-empty",
+        module="circulation",
+        command="empty_tank",
+        args={},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_empty_tank_with_args_rejected(validator):
+    # python_data_type is {None}: the equipment's transformer raises on any
+    # argument, so the gateway must refuse instead of causing a task error.
+    cmd = _make_valid_command(
+        command_id="cmd-empty-args",
+        module="circulation",
+        command="empty_tank",
+        args={"arg1": "50"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "takes no arguments" in result.reason
+
+
+def test_circulation_planned_era_commands_rejected(validator):
+    # pump_control/valve_control never existed on the equipment.
+    for i, command in enumerate(("pump_control", "valve_control")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-planned-{i}",
+            module="circulation",
+            command=command,
+            args={},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is False
+        assert "whitelist" in result.reason.lower()
+
+
 def test_sentinel_ok_allows_command(validator, mock_db_reader):
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},

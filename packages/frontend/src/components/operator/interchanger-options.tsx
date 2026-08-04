@@ -142,6 +142,7 @@ export function InterchangerOptions({
         statePulse={busy && action?.command === "cam_interchange"}
         requirement="Secuencia automática: axial ↓ → rotación → axial ↑"
         options={camOptions}
+        currentHint="posición actual"
         onRun={(opt) =>
           onRun(
             "cam_interchange",

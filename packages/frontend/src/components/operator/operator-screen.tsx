@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProcessDiagram } from "@/components/scada/process-diagram";
+import {
+  ProcessDiagram,
+  type ActionableModule,
+} from "@/components/scada/process-diagram";
+import { ModuleSection, summaryOf } from "./module-section";
 import { InterchangerOptions } from "./interchanger-options";
+import { CirculationOptions } from "./circulation-options";
 import { CommandHistory } from "./command-history";
 import { useScadaTelemetry } from "@/hooks/use-scada-telemetry";
 import { useTelemetry } from "@/hooks/use-telemetry";
@@ -13,17 +18,25 @@ import { useActionRunner } from "@/hooks/use-action-runner";
  *
  * Interaction model (per SAX's design):
  *  - The diagram shows the equipment exactly like the Status screen, but
- *    action-capable modules render a clickable hotspot; clicking one focuses
- *    its action cards in the right-hand panel.
- *  - Each card shows the element's CURRENT state (live telemetry), its
- *    selectable options, and — once fired — a stepper tracking the order
- *    through the real pipeline (sent → received → executing → done), so the
- *    operator never double-fires or stacks conflicting orders.
- *  - While an action is in flight its whole module stays locked.
+ *    action-capable modules render a clickable hotspot; clicking one opens
+ *    that module's section in the right-hand panel.
+ *  - The panel is an accordion, one module open at a time, so it scales as
+ *    modules are added. Each card shows the element's CURRENT state (live
+ *    telemetry), its selectable options, and — once fired — a stepper
+ *    tracking the order through the real pipeline (sent → received →
+ *    executing → done), so the operator never double-fires or stacks
+ *    conflicting orders.
+ *  - While an action is in flight its whole module stays locked, and a
+ *    collapsed section still shows the in-flight badge in its header.
  *
- * Rollout is module by module; today: INTERCHANGER (cam_interchange,
- * usage_axial, usage_rot).
+ * Modules live today: INTERCHANGER, CIRCULATION.
  */
+
+const MODULES: { key: ActionableModule; title: string }[] = [
+  { key: "interchanger", title: "Interchanger" },
+  { key: "circulation", title: "Circulación" },
+];
+
 export function OperatorScreen({
   deviceId,
   provisioned,
@@ -33,10 +46,13 @@ export function OperatorScreen({
 }) {
   const { diagram, meta } = useScadaTelemetry(deviceId);
   const interchanger = useTelemetry(deviceId, "interchanger");
+  const circulation = useTelemetry(deviceId, "circulation");
   const { actions, run, dismiss } = useActionRunner(deviceId);
 
-  // Bumped when the diagram's interchanger hotspot is clicked → the module's
-  // cards scroll into view and flash.
+  const [openModule, setOpenModule] = useState<ActionableModule | null>(
+    "interchanger"
+  );
+  // Bumped when a diagram hotspot is clicked → the module's cards flash.
   const [focusSignal, setFocusSignal] = useState(0);
 
   // Re-render every 15s so the freshness banner ages truthfully even when no
@@ -50,6 +66,27 @@ export function OperatorScreen({
   // Data freshness: with a stale link, orders may never reach the equipment.
   const ageMs = meta.lastUpdated ? Date.now() - meta.lastUpdated.getTime() : null;
   const dataStale = !meta.loading && (ageMs === null || ageMs > 300_000);
+
+  function focusModule(module: ActionableModule) {
+    setOpenModule(module);
+    setFocusSignal((n) => n + 1);
+  }
+
+  const i = interchanger.data;
+  const c = circulation.data;
+
+  const summaries: Record<ActionableModule, string> = {
+    interchanger: summaryOf(
+      i?.current_position,
+      i ? `axial ${i.axial_up ? "UP" : i.axial_down ? "DOWN" : "?"}` : null,
+      i ? `rot ${i.rot_up ? "UP" : i.rot_down ? "DOWN" : "?"}` : null
+    ),
+    circulation: summaryOf(
+      c?.operation_state,
+      c ? `tanque ${Number(c.tank_percentage_level ?? 0)} %` : null,
+      c?.pump_state ? `bomba ${c.pump_state}` : null
+    ),
+  };
 
   return (
     <div className="space-y-3">
@@ -71,40 +108,61 @@ export function OperatorScreen({
         {/* Center — live process diagram with actionable hotspots */}
         <ProcessDiagram
           state={diagram}
-          actionableModules={["interchanger"]}
-          onModuleClick={() => setFocusSignal((n) => n + 1)}
+          actionableModules={MODULES.map((m) => m.key)}
+          onModuleClick={focusModule}
         />
 
-        {/* Right — Opciones panel */}
-        <div className="space-y-3">
+        {/* Right — Opciones panel (accordion, one module open at a time) */}
+        <div className="space-y-2">
           <div className="rounded-2xl border border-white/10 bg-black/60 px-4 py-3 backdrop-blur-md">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.7)]" />
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
-                  Opciones
-                </h2>
-              </div>
-              <span className="rounded-md bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-300 ring-1 ring-cyan-500/25">
-                Interchanger
-              </span>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.7)]" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
+                Opciones
+              </h2>
             </div>
             <p className="mt-1.5 text-[10px] leading-snug text-slate-500">
-              Acciones disponibles del módulo con su estado actual. También
-              puedes hacer clic en el elemento marcado del diagrama.
+              Acciones disponibles por módulo con su estado actual. También
+              puedes hacer clic en los elementos marcados del diagrama.
             </p>
           </div>
 
-          <InterchangerOptions
-            data={interchanger.data}
-            action={actions["interchanger"] ?? null}
-            disabled={!provisioned}
-            onRun={(command, args, label, timeoutMs) =>
-              run("interchanger", command, args, label, timeoutMs)
-            }
-            onDismiss={() => dismiss("interchanger")}
-            focusSignal={focusSignal}
-          />
+          {MODULES.map((m) => (
+            <ModuleSection
+              key={m.key}
+              title={m.title}
+              summary={summaries[m.key]}
+              open={openModule === m.key}
+              onToggle={() =>
+                setOpenModule((prev) => (prev === m.key ? null : m.key))
+              }
+              action={actions[m.key] ?? null}
+            >
+              {m.key === "interchanger" ? (
+                <InterchangerOptions
+                  data={interchanger.data}
+                  action={actions["interchanger"] ?? null}
+                  disabled={!provisioned}
+                  onRun={(command, args, label, timeoutMs) =>
+                    run("interchanger", command, args, label, timeoutMs)
+                  }
+                  onDismiss={() => dismiss("interchanger")}
+                  focusSignal={focusSignal}
+                />
+              ) : (
+                <CirculationOptions
+                  data={circulation.data}
+                  action={actions["circulation"] ?? null}
+                  disabled={!provisioned}
+                  onRun={(command, args, label, timeoutMs) =>
+                    run("circulation", command, args, label, timeoutMs)
+                  }
+                  onDismiss={() => dismiss("circulation")}
+                  focusSignal={focusSignal}
+                />
+              )}
+            </ModuleSection>
+          ))}
         </div>
       </div>
 
