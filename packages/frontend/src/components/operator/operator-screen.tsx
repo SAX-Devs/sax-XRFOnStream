@@ -104,16 +104,27 @@ export function OperatorScreen({
         </Banner>
       )}
 
-      <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-3">
-        {/* Center — live process diagram with actionable hotspots */}
-        <ProcessDiagram
-          state={diagram}
-          actionableModules={MODULES.map((m) => m.key)}
-          onModuleClick={focusModule}
-        />
+      {/* No `items-start` here on purpose: the diagram's cell must stretch to
+          the row height (set by the taller Opciones panel) so the sticky
+          wrapper inside it has room to travel. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-3">
+        {/* Center — live process diagram with actionable hotspots.
+            Pinned below the 56px top nav: while an action runs, the operator
+            scrolls the Opciones panel to follow the stepper WITHOUT losing
+            sight of the equipment — the diagram is where the order's real
+            effect shows up. */}
+        <div>
+          <div className="sticky top-[68px]">
+            <ProcessDiagram
+              state={diagram}
+              actionableModules={MODULES.map((m) => m.key)}
+              onModuleClick={focusModule}
+            />
+          </div>
+        </div>
 
         {/* Right — Opciones panel (accordion, one module open at a time) */}
-        <div className="space-y-2">
+        <div className="space-y-2 self-start">
           <div className="rounded-2xl border border-white/10 bg-black/60 px-4 py-3 backdrop-blur-md">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.7)]" />
