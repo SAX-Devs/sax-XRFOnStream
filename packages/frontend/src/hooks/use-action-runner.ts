@@ -10,8 +10,9 @@ import { createClient } from "@/lib/supabase/client";
  *   sent     → audit row created, command published over MQTT
  *   ack      → the gateway validated it and INSERTED it into the equipment's
  *              command table (the CommandDaemon will pick it up)
- *   completed/error → the equipment's *_action table went busy→ready/error
- *              and the result travelled back (command_audit via Realtime)
+ *   completed/error → the equipment's *_action table reached a terminal
+ *              status and the result travelled back (command_audit, Realtime)
+ *   cancelled → the operator asked to stop it and the equipment complied
  *   rejected → the gateway's validator refused it (whitelist/sentinel/rate)
  *   timeout  → no terminal status within the action's expected window; the
  *              UI stops blocking but keeps listening for a late result
@@ -22,14 +23,23 @@ export type ActionStage =
   | "ack"
   | "completed"
   | "error"
+  | "cancelled"
   | "rejected"
   | "timeout";
 
 export const TERMINAL_STAGES: ActionStage[] = [
   "completed",
   "error",
+  "cancelled",
   "rejected",
 ];
+
+/**
+ * Marker the gateway puts in error_message when a task ended because it was
+ * cancelled. The cloud audit vocabulary has no 'cancelled' status, so this is
+ * how a cancellation is told apart from a real failure.
+ */
+const CANCELLED_MARKER = "Task cancelled";
 
 export interface InflightAction {
   commandId: string | null;
@@ -42,6 +52,8 @@ export interface InflightAction {
   startedAt: number;
   /** Visual timeout for this action (ms). */
   timeoutMs: number;
+  /** A cancel order was sent for this action and we're awaiting its effect. */
+  cancelRequested: boolean;
 }
 
 interface AuditRowPatch {
@@ -51,7 +63,7 @@ interface AuditRowPatch {
 }
 
 /** command_audit status → stage (audit rows use the same vocabulary). */
-function stageFromStatus(status: string): ActionStage | null {
+function stageFromStatus(status: string, errorMessage: string | null): ActionStage | null {
   switch (status) {
     case "ack":
     case "executing":
@@ -59,7 +71,7 @@ function stageFromStatus(status: string): ActionStage | null {
     case "completed":
       return "completed";
     case "error":
-      return "error";
+      return errorMessage === CANCELLED_MARKER ? "cancelled" : "error";
     case "rejected":
       return "rejected";
     case "expired":
@@ -89,7 +101,7 @@ export function useActionRunner(deviceId: string) {
       (m) => current[m]?.commandId === patch.id
     );
     if (!moduleKey) return;
-    const stage = stageFromStatus(patch.status);
+    const stage = stageFromStatus(patch.status, patch.error_message);
     if (!stage) return;
 
     setActions((prev) => {
@@ -102,7 +114,8 @@ export function useActionRunner(deviceId: string) {
         [moduleKey]: {
           ...entry,
           stage,
-          error: patch.error_message ?? entry.error,
+          // A cancellation isn't a failure — don't surface the raw marker.
+          error: stage === "cancelled" ? null : patch.error_message ?? entry.error,
         },
       };
     });
@@ -232,6 +245,7 @@ export function useActionRunner(deviceId: string) {
           error: null,
           startedAt: Date.now(),
           timeoutMs,
+          cancelRequested: false,
         },
       }));
 
@@ -275,6 +289,58 @@ export function useActionRunner(deviceId: string) {
     [deviceId]
   );
 
+  /**
+   * Asks the equipment to stop the action in flight on this module.
+   *
+   * The cancel order deliberately does NOT take the module's action slot: it
+   * has no *_action row of its own (the CommandDaemon intercepts it), so it
+   * would never get a result. Its effect arrives as the target task's own
+   * result, carrying the cancellation marker.
+   */
+  const requestCancel = useCallback(
+    async (module: string): Promise<{ ok: boolean; error?: string }> => {
+      const current = actionsRef.current[module];
+      if (!current || TERMINAL_STAGES.includes(current.stage)) {
+        return { ok: false, error: "No hay una acción en curso" };
+      }
+
+      setActions((prev) =>
+        prev[module] ? { ...prev, [module]: { ...prev[module], cancelRequested: true } } : prev
+      );
+
+      try {
+        const res = await fetch(`/api/devices/${deviceId}/commands`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            module,
+            command: "cancel",
+            args: { arg1: current.command },
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const msg = body.error ?? `Error ${res.status} al cancelar`;
+          setActions((prev) =>
+            prev[module]
+              ? { ...prev, [module]: { ...prev[module], cancelRequested: false } }
+              : prev
+          );
+          return { ok: false, error: msg };
+        }
+        return { ok: true };
+      } catch {
+        setActions((prev) =>
+          prev[module]
+            ? { ...prev, [module]: { ...prev[module], cancelRequested: false } }
+            : prev
+        );
+        return { ok: false, error: "No se pudo contactar al servidor" };
+      }
+    },
+    [deviceId]
+  );
+
   const dismiss = useCallback((module: string) => {
     setActions((prev) => {
       const next = { ...prev };
@@ -289,5 +355,5 @@ export function useActionRunner(deviceId: string) {
     return !!a && !TERMINAL_STAGES.includes(a.stage) && a.stage !== "timeout";
   }, []);
 
-  return { actions, run, dismiss, isModuleBusy };
+  return { actions, run, requestCancel, dismiss, isModuleBusy };
 }

@@ -55,6 +55,12 @@ interface ActionCardProps {
   /** Label of another action keeping the module busy, if any. */
   lockedBy: string | null;
   disabled?: boolean;
+  /**
+   * The equipment can actually interrupt this action mid-run (its function
+   * declares cancel_event). Only then is a Cancel button honest.
+   */
+  cancellable?: boolean;
+  onCancel?: () => void;
   onRun: (option: ActionOption) => void;
   onDismiss: () => void;
   /** Bumped when the diagram element is clicked — flashes the card. */
@@ -77,6 +83,8 @@ export function ActionCard({
   inflight,
   lockedBy,
   disabled = false,
+  cancellable = false,
+  onCancel,
   onRun,
   onDismiss,
   focusSignal = 0,
@@ -106,7 +114,16 @@ export function ActionCard({
     (inflight.stage === "error" ||
       inflight.stage === "rejected" ||
       inflight.stage === "timeout");
-  const running = inflight && !failed && inflight.stage !== "completed";
+  const cancelled = inflight?.stage === "cancelled";
+  const running =
+    inflight && !failed && !cancelled && inflight.stage !== "completed";
+  // Cancelling only makes sense once the equipment has the order in hand.
+  const canCancel =
+    cancellable &&
+    !!onCancel &&
+    running &&
+    inflight.stage !== "sending" &&
+    !inflight.cancelRequested;
   const interactionBlocked = disabled || !!running || !!lockedBy;
 
   return (
@@ -156,13 +173,26 @@ export function ActionCard({
       {inflight ? (
         <div className="mt-3 space-y-2.5">
           <div className="rounded-xl border border-white/5 bg-white/[0.03] px-3 pb-2 pt-3">
-            <div className="mb-2.5 flex items-center justify-between">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
               <span className="text-[11px] font-medium text-slate-300">
                 {inflight.label}
               </span>
               {inflight.stage === "completed" && (
                 <span className="text-[10px] font-semibold text-emerald-300">
                   ✓ listo
+                </span>
+              )}
+              {canCancel && (
+                <button
+                  onClick={onCancel}
+                  className="shrink-0 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-200"
+                >
+                  Cancelar
+                </button>
+              )}
+              {inflight.cancelRequested && running && (
+                <span className="shrink-0 text-[10px] font-semibold text-slate-400">
+                  cancelando…
                 </span>
               )}
             </div>
@@ -174,6 +204,12 @@ export function ActionCard({
             )}
           </div>
 
+          {cancelled && (
+            <ResultNote tone="neutral" onDismiss={onDismiss}>
+              Acción cancelada. El equipo detuvo la operación — revisa el
+              estado actual antes de reintentar.
+            </ResultNote>
+          )}
           {inflight.stage === "timeout" && (
             <ResultNote tone="warn" onDismiss={onDismiss}>
               El equipo no reportó resultado en el tiempo esperado. Verifica el
@@ -273,14 +309,16 @@ function ResultNote({
   children,
   onDismiss,
 }: {
-  tone: "warn" | "error";
+  tone: "warn" | "error" | "neutral";
   children: React.ReactNode;
   onDismiss: () => void;
 }) {
   const cls =
     tone === "warn"
       ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
-      : "border-red-500/30 bg-red-500/10 text-red-200";
+      : tone === "neutral"
+        ? "border-white/15 bg-white/[0.06] text-slate-300"
+        : "border-red-500/30 bg-red-500/10 text-red-200";
   return (
     <div
       className={`flex items-start justify-between gap-2 rounded-lg border px-3 py-2 text-[11px] leading-snug ${cls}`}

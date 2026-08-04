@@ -75,6 +75,7 @@ interface CirculationOptionsProps {
     label: string,
     timeoutMs: number
   ) => void;
+  onCancel: () => void;
   onDismiss: () => void;
   focusSignal: number;
 }
@@ -84,6 +85,7 @@ export function CirculationOptions({
   action,
   disabled,
   onRun,
+  onCancel,
   onDismiss,
   focusSignal,
 }: CirculationOptionsProps) {
@@ -177,7 +179,9 @@ export function CirculationOptions({
             : null
         }
         options={fillOptions}
-        longRunNote="Puede tardar hasta 10 min. Durante el llenado el equipo pasa a Toma de muestra y al terminar queda en Salmuera."
+        cancellable
+        onCancel={onCancel}
+        longRunNote="Puede tardar hasta 10 min y se puede cancelar. Durante el llenado el equipo pasa a Toma de muestra y al terminar queda en Salmuera."
         progress={<TankProgress level={level} direction="up" action={action} />}
         onRun={(opt) =>
           onRun(

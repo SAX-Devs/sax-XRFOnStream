@@ -65,6 +65,12 @@ export const OPERATOR_ACTIONS: Record<
     tank_percentage_fill: { arg1: ["10", "25", "50", "100"] },
     // empty_tank() — takes no arguments ({None}).
     empty_tank: { arg1: null },
+    // "cancel" is intercepted by the equipment's CommandDaemon, which signals
+    // the cancel_event of the task named in arg1. Only tasks whose signature
+    // declares cancel_event are really interruptible — for any other task the
+    // function would run to completion and then be mislabelled "cancelled" —
+    // so only the genuinely cancellable one may be targeted.
+    cancel: { arg1: ["tank_percentage_fill"] },
   },
 };
 

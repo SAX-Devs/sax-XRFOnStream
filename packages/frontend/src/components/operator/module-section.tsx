@@ -40,7 +40,9 @@ export function ModuleSection({
     (action.stage === "error" ||
       action.stage === "rejected" ||
       action.stage === "timeout");
-  const running = action && !failed && action.stage !== "completed";
+  const cancelled = action?.stage === "cancelled";
+  const running =
+    action && !failed && !cancelled && action.stage !== "completed";
   const succeeded = action?.stage === "completed";
 
   return (
@@ -95,6 +97,11 @@ export function ModuleSection({
         {succeeded && (
           <span className="shrink-0 rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-300 ring-1 ring-emerald-500/30">
             ✓ listo
+          </span>
+        )}
+        {cancelled && (
+          <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-1 text-[10px] font-semibold text-slate-300 ring-1 ring-white/15">
+            ■ cancelada
           </span>
         )}
 

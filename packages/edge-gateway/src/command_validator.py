@@ -21,7 +21,14 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
     # The previous entries (pump_control/valve_control) were planned-era names
     # that don't exist on the equipment — the real tasks are set_pump_state,
     # set_valve_state, set_operation_mode, tank_percentage_fill, empty_tank…
-    "circulation": ["set_operation_mode", "tank_percentage_fill", "empty_tank"],
+    # "cancel" is not a task: the CommandDaemon intercepts it and signals the
+    # cancel_event of the task named in arg1 (see ARGUMENT_ENUMS).
+    "circulation": [
+        "set_operation_mode",
+        "tank_percentage_fill",
+        "empty_tank",
+        "cancel",
+    ],
     # Reconciled with the real interchanger_action catalog (operator subset).
     # The equipment declares python_data_type per task: cam_interchange {str},
     # usage_axial/usage_rot {bool,int} — see ARGUMENT_ENUMS/REQUIRED_ARGS.
@@ -67,6 +74,13 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
     "cam_interchange": {"arg1": ("Chamber", "Recal")},
     "usage_axial": {"arg1": ("true", "false")},
     "usage_rot": {"arg1": ("true", "false")},
+    # Cancellation only really interrupts tasks whose signature declares
+    # cancel_event/stop_event — the daemon inspects it (_get_cancel_kwargs).
+    # For any other task the event is set but the function runs to completion
+    # and is then mislabelled "cancelled", so only the genuinely cancellable
+    # task may be targeted. Verified on the equipment: of the operator set,
+    # only tank_percentage_fill takes cancel_event.
+    "cancel": {"arg1": ("tank_percentage_fill",)},
     # The 7 branches of Circulation.set_operation_mode; any other value falls
     # through every branch and silently does nothing.
     "set_operation_mode": {
@@ -91,6 +105,7 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "usage_rot": ("arg1", "arg2"),
     "set_operation_mode": ("arg1",),
     "tank_percentage_fill": ("arg1",),
+    "cancel": ("arg1",),
 }
 
 # Tasks whose declared python_data_type is {None}: the equipment's transformer
@@ -112,6 +127,9 @@ RATE_LIMITS: dict[tuple[str, str], float] = {
     ("circulation", "set_operation_mode"): 5.0,
     ("circulation", "tank_percentage_fill"): 15.0,
     ("circulation", "empty_tank"): 15.0,
+    # Stopping something must stay responsive — just enough to absorb a
+    # double-click.
+    ("circulation", "cancel"): 2.0,
 }
 
 SENTINEL_BLOCKING_RULES: dict[str, list[str]] = {

@@ -363,6 +363,57 @@ def test_circulation_planned_era_commands_rejected(validator):
         assert "whitelist" in result.reason.lower()
 
 
+def test_cancel_of_cancellable_task_allowed(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-cancel",
+        module="circulation",
+        command="cancel",
+        args={"arg1": "tank_percentage_fill"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_cancel_of_non_cancellable_task_rejected(validator):
+    # empty_tank has no cancel_event parameter: the daemon would set the event,
+    # let the task run to completion and then mislabel it "cancelled".
+    cmd = _make_valid_command(
+        command_id="cmd-cancel-bad",
+        module="circulation",
+        command="cancel",
+        args={"arg1": "empty_tank"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_cancel_without_target_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-cancel-noarg",
+        module="circulation",
+        command="cancel",
+        args={},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "Missing required argument" in result.reason
+
+
+def test_cancel_not_allowed_on_interchanger(validator):
+    # None of the interchanger's operator tasks are cancellable, so the module
+    # doesn't whitelist 'cancel' at all.
+    cmd = _make_valid_command(
+        command_id="cmd-cancel-inter",
+        module="interchanger",
+        command="cancel",
+        args={"arg1": "cam_interchange"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "whitelist" in result.reason.lower()
+
+
 def test_sentinel_ok_allows_command(validator, mock_db_reader):
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},

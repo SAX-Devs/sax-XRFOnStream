@@ -24,7 +24,13 @@ const STEPS: StepDef[] = [
   { key: "done", label: "Completado" },
 ];
 
-type NodeState = "done" | "active" | "pending" | "failed" | "stalled";
+type NodeState =
+  | "done"
+  | "active"
+  | "pending"
+  | "failed"
+  | "stalled"
+  | "stopped";
 
 /** Index of the step currently in progress for a given stage. */
 function progressIndex(stage: ActionStage): number {
@@ -38,6 +44,7 @@ function progressIndex(stage: ActionStage): number {
     case "completed":
       return 4; // everything done
     case "error":
+    case "cancelled":
     case "rejected":
     case "timeout":
       return -1; // resolved separately below
@@ -58,6 +65,12 @@ function nodeState(index: number, stage: ActionStage): NodeState {
     if (index === 2) return "failed";
     return "pending";
   }
+  if (stage === "cancelled") {
+    // Sent and received fine; execution was stopped on request.
+    if (index <= 1) return "done";
+    if (index === 2) return "stopped";
+    return "pending";
+  }
   if (stage === "timeout") {
     if (index <= 1) return "done";
     if (index === 2) return "stalled";
@@ -75,6 +88,8 @@ const NODE_CLASS: Record<NodeState, string> = {
   pending: "border-slate-600 bg-transparent text-slate-600",
   failed: "border-red-400 bg-red-500/20 text-red-300",
   stalled: "border-amber-500 bg-amber-500/15 text-amber-400",
+  // A cancellation is a deliberate stop, not a fault — read it as neutral.
+  stopped: "border-slate-400 bg-slate-400/20 text-slate-300",
 };
 
 const LABEL_CLASS: Record<NodeState, string> = {
@@ -83,6 +98,7 @@ const LABEL_CLASS: Record<NodeState, string> = {
   pending: "text-slate-600",
   failed: "text-red-300",
   stalled: "text-amber-400",
+  stopped: "text-slate-300",
 };
 
 export function ActionStepper({ stage }: { stage: ActionStage }) {
@@ -108,7 +124,15 @@ export function ActionStepper({ stage }: { stage: ActionStage }) {
                 <span
                   className={`relative inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 text-[10px] font-bold transition-colors duration-300 ${NODE_CLASS[state]}`}
                 >
-                  {state === "done" ? "✓" : state === "failed" ? "✕" : state === "stalled" ? "?" : ""}
+                  {state === "done"
+                    ? "✓"
+                    : state === "failed"
+                      ? "✕"
+                      : state === "stalled"
+                        ? "?"
+                        : state === "stopped"
+                          ? "■"
+                          : ""}
                 </span>
               </span>
               <span

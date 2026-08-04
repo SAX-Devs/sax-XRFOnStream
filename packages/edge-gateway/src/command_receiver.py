@@ -58,8 +58,38 @@ class CommandReceiver:
             self._publish_rejection(command, str(e))
 
     def _execute_command(self, command: CommandPayload) -> None:
-        """Insert command into local DB tables (same protocol as SQLClient.execute_command)."""
-        # 1. INSERT into command table
+        """Insert command into local DB tables (same protocol as SQLClient.execute_command).
+
+        Order matters. The action status is claimed BEFORE the command row is
+        inserted, because the CommandDaemon drops any command whose task is
+        still sitting in ``cancelling``/``cancelled`` — writing
+        ``command_received`` up front clears that and closes the window where
+        the daemon could read the stale status and silently discard the
+        command. That window is reachable in practice now that operators can
+        cancel a task.
+
+        The UPDATE returns the row's ``ts`` (a BEFORE UPDATE trigger sets it to
+        CURRENT_TIMESTAMP), which is stored as the mapping's ``created_at``: the
+        equipment-clock instant this command started. Because that anchor is
+        taken BEFORE the command exists, the result reporter recognises the
+        result even for a task that starts and finishes before the mapping row
+        is written — and it never mistakes a leftover terminal status for the
+        result of this command.
+        """
+        # 1. Claim the *_action row and capture the equipment-clock anchor.
+        def claim_action(conn):
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"UPDATE {command.module}_action SET status_task='command_received' "
+                    "WHERE task=%s RETURNING ts",
+                    (command.command,),
+                )
+                row = cur.fetchone()
+                return row["ts"] if row else None
+
+        started_at = self._db._execute_with_retry(claim_action)
+
+        # 2. INSERT into the command table — the daemon may pick it up at once.
         def insert_command(conn):
             with conn.cursor() as cur:
                 cur.execute(
@@ -81,24 +111,23 @@ class CommandReceiver:
 
         local_index = self._db._execute_with_retry(insert_command)
 
-        # 2. UPDATE *_action table
-        def update_action(conn):
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"UPDATE {command.module}_action SET status_task='command_received' WHERE task=%s",
-                    (command.command,),
-                )
-
-        self._db._execute_with_retry(update_action)
-
-        # 3. Save mapping in edge_gateway_command_map
+        # 3. Save the mapping, anchored to the claim instant. 'cancel' has no
+        #    *_action row (the daemon intercepts it), so fall back to the DB
+        #    clock for its anchor.
         def save_mapping(conn):
             with conn.cursor() as cur:
                 cur.execute(
-                    """INSERT INTO edge_gateway_command_map (command_id, local_index, module, command)
-                       VALUES (%s, %s, %s, %s)
+                    """INSERT INTO edge_gateway_command_map
+                           (command_id, local_index, module, command, created_at)
+                       VALUES (%s, %s, %s, %s, COALESCE(%s, now()))
                        ON CONFLICT (command_id) DO NOTHING""",
-                    (command.command_id, local_index, command.module, command.command),
+                    (
+                        command.command_id,
+                        local_index,
+                        command.module,
+                        command.command,
+                        started_at,
+                    ),
                 )
 
         self._db._execute_with_retry(save_mapping)

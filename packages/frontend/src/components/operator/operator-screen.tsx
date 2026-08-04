@@ -47,7 +47,7 @@ export function OperatorScreen({
   const { diagram, meta } = useScadaTelemetry(deviceId);
   const interchanger = useTelemetry(deviceId, "interchanger");
   const circulation = useTelemetry(deviceId, "circulation");
-  const { actions, run, dismiss } = useActionRunner(deviceId);
+  const { actions, run, requestCancel, dismiss } = useActionRunner(deviceId);
 
   const [openModule, setOpenModule] = useState<ActionableModule | null>(
     "interchanger"
@@ -157,6 +157,7 @@ export function OperatorScreen({
                   onRun={(command, args, label, timeoutMs) =>
                     run("circulation", command, args, label, timeoutMs)
                   }
+                  onCancel={() => requestCancel("circulation")}
                   onDismiss={() => dismiss("circulation")}
                   focusSignal={focusSignal}
                 />
