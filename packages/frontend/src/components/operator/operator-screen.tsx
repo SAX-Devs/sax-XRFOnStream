@@ -49,9 +49,11 @@ export function OperatorScreen({
   const circulation = useTelemetry(deviceId, "circulation");
   const { actions, run, requestCancel, dismiss } = useActionRunner(deviceId);
 
-  const [openModule, setOpenModule] = useState<ActionableModule | null>(
-    "interchanger"
-  );
+  // Every module starts collapsed: opening the screen shows the equipment and
+  // a compact index of what can be acted on, never a module chosen for the
+  // operator. Expanding one is a deliberate act — from here or from the
+  // diagram's hotspots.
+  const [openModule, setOpenModule] = useState<ActionableModule | null>(null);
   // Bumped when a diagram hotspot is clicked → the module's cards flash.
   const [focusSignal, setFocusSignal] = useState(0);
 
