@@ -16,7 +16,11 @@ logger = logging.getLogger("edge-gateway.command-validator")
 
 COMMAND_WHITELIST: dict[str, list[str]] = {
     "generator": ["set_hv_state", "set_voltage_and_current", "power"],
-    "vacuum": ["set_atmospheric_condition", "pump_control", "valve_control"],
+    # Reconciled with the real vacuum_action catalog (operator subset). The
+    # previous pump_control/valve_control were planned-era names; the real
+    # tasks are open_valve, close_valve, pump_switch, emergency_purge,
+    # get_vaccum_pressure, rele_test, status, set_atmospheric_condition.
+    "vacuum": ["set_atmospheric_condition", "emergency_purge"],
     # Reconciled with the real circulation_action catalog (operator subset).
     # The previous entries (pump_control/valve_control) were planned-era names
     # that don't exist on the equipment — the real tasks are set_pump_state,
@@ -81,6 +85,11 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
     # task may be targeted. Verified on the equipment: of the operator set,
     # only tank_percentage_fill takes cancel_event.
     "cancel": {"arg1": ("tank_percentage_fill",)},
+    # The 5 branches of Vacuum.set_atmospheric_condition; anything else hits
+    # the final else and raises ValueError("Unknown status") on the equipment.
+    "set_atmospheric_condition": {
+        "arg1": ("Atmospheric", "Vacuum", "Purge", "Clean", "Closed")
+    },
     # The 7 branches of Circulation.set_operation_mode; any other value falls
     # through every branch and silently does nothing.
     "set_operation_mode": {
@@ -104,6 +113,7 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "usage_axial": ("arg1", "arg2"),
     "usage_rot": ("arg1", "arg2"),
     "set_operation_mode": ("arg1",),
+    "set_atmospheric_condition": ("arg1",),
     "tank_percentage_fill": ("arg1",),
     "cancel": ("arg1",),
 }
@@ -112,13 +122,17 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
 # raises on ANY argument, so reject commands that carry one.
 NO_ARG_COMMANDS: dict[str, tuple[str, ...]] = {
     "circulation": ("empty_tank",),
+    "vacuum": ("emergency_purge",),
 }
 
 RATE_LIMITS: dict[tuple[str, str], float] = {
     ("generator", "set_hv_state"): 5.0,
     ("generator", "set_voltage_and_current"): 3.0,
     ("generator", "power"): 10.0,
-    ("vacuum", "set_atmospheric_condition"): 5.0,
+    # Reaching Vacuum waits ~35s for a pressure target; re-firing meanwhile is
+    # always a mistake. The emergency purge runs a ~15s valve sequence.
+    ("vacuum", "set_atmospheric_condition"): 10.0,
+    ("vacuum", "emergency_purge"): 20.0,
     ("interchanger", "cam_interchange"): 10.0,
     ("interchanger", "usage_axial"): 5.0,
     ("interchanger", "usage_rot"): 5.0,

@@ -414,6 +414,69 @@ def test_cancel_not_allowed_on_interchanger(validator):
     assert "whitelist" in result.reason.lower()
 
 
+def test_set_atmospheric_condition_valid_values(validator):
+    for i, status in enumerate(
+        ("Atmospheric", "Vacuum", "Purge", "Clean", "Closed")
+    ):
+        cmd = _make_valid_command(
+            command_id=f"cmd-atm-{i}",
+            module="vacuum",
+            command="set_atmospheric_condition",
+            args={"arg1": status},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{status}: {result.reason}"
+        validator._last_command_times.clear()
+
+
+def test_set_atmospheric_condition_invalid_value_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-atm-bad",
+        module="vacuum",
+        command="set_atmospheric_condition",
+        args={"arg1": "Vacio"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_emergency_purge_valid_without_args(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-purge",
+        module="vacuum",
+        command="emergency_purge",
+        args={},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_emergency_purge_with_args_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-purge-args",
+        module="vacuum",
+        command="emergency_purge",
+        args={"arg1": "Clean"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "takes no arguments" in result.reason
+
+
+def test_vacuum_planned_era_commands_rejected(validator):
+    for i, command in enumerate(("pump_control", "valve_control")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-vac-planned-{i}",
+            module="vacuum",
+            command=command,
+            args={},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is False
+        assert "whitelist" in result.reason.lower()
+
+
 def test_sentinel_ok_allows_command(validator, mock_db_reader):
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},

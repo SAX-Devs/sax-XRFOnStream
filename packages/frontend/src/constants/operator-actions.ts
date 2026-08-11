@@ -72,6 +72,16 @@ export const OPERATOR_ACTIONS: Record<
     // so only the genuinely cancellable one may be targeted.
     cancel: { arg1: ["tank_percentage_fill"] },
   },
+  vacuum: {
+    // set_atmospheric_condition(status: str) — the 5 branches of
+    // Vacuum.set_atmospheric_condition; anything else raises ValueError on
+    // the equipment ("Unknown status").
+    set_atmospheric_condition: {
+      arg1: ["Atmospheric", "Vacuum", "Purge", "Clean", "Closed"],
+    },
+    // emergency_purge() — takes no arguments ({None}).
+    emergency_purge: { arg1: null },
+  },
 };
 
 /**

@@ -43,6 +43,11 @@ interface ActionCardProps {
   optionColumns?: 1 | 2;
   /** Hint shown on the option the equipment already reports. */
   currentHint?: string;
+  /**
+   * "danger" marks a safety/emergency action so it reads as drastic before
+   * it's fired — the inline confirm still guards it either way.
+   */
+  tone?: "normal" | "danger";
   /** Shown next to the options for actions that take minutes to run. */
   longRunNote?: string;
   /**
@@ -78,6 +83,7 @@ export function ActionCard({
   options,
   optionColumns = 2,
   currentHint = "estado actual",
+  tone = "normal",
   longRunNote,
   progress,
   inflight,
@@ -132,7 +138,9 @@ export function ActionCard({
       className={`rounded-2xl border bg-black/60 p-4 backdrop-blur-md transition-all duration-500 ${
         flash
           ? "border-cyan-400/70 shadow-[0_0_24px_rgba(34,211,238,0.25)]"
-          : "border-white/10"
+          : tone === "danger"
+            ? "border-red-500/30"
+            : "border-white/10"
       }`}
     >
       {/* Header: title + live state chip */}
@@ -267,7 +275,9 @@ export function ActionCard({
                   className={`group rounded-xl border px-3 py-2 text-left transition-all ${
                     opt.isCurrent
                       ? "cursor-default border-emerald-500/25 bg-emerald-500/[0.06]"
-                      : "border-white/10 bg-white/[0.04] hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:shadow-[0_0_14px_rgba(34,211,238,0.12)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/[0.04] disabled:hover:shadow-none"
+                      : tone === "danger"
+                        ? "border-red-500/40 bg-red-500/10 hover:border-red-400/70 hover:bg-red-500/20 hover:shadow-[0_0_14px_rgba(239,68,68,0.18)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:shadow-none"
+                        : "border-white/10 bg-white/[0.04] hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:shadow-[0_0_14px_rgba(34,211,238,0.12)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/[0.04] disabled:hover:shadow-none"
                   }`}
                 >
                   <span

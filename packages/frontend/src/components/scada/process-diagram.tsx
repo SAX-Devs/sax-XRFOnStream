@@ -53,7 +53,7 @@ export interface ScadaDiagramState {
 
 /** Modules that can be rendered as clickable action targets (Operator screen).
  * Grows module by module as the operator rollout advances. */
-export type ActionableModule = "interchanger" | "circulation";
+export type ActionableModule = "interchanger" | "circulation" | "vacuum";
 
 /** Clickable region per actionable module (diagram viewBox coordinates). */
 const MODULE_HOTSPOTS: Record<
@@ -65,6 +65,9 @@ const MODULE_HOTSPOTS: Record<
   // Recirculation tank + its two retro valves — where the operator's
   // circulation actions (fill / empty / operation mode) take effect.
   circulation: { x: 36, y: 410, width: 226, height: 118 },
+  // Internal chamber (tube + detector) — the volume the vacuum system pumps
+  // down, purges and cleans. Starts right after the interchanger hotspot.
+  vacuum: { x: 740, y: 302, width: 130, height: 112 },
 };
 
 interface ProcessDiagramProps {
