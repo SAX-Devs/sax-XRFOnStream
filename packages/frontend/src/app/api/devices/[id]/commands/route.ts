@@ -58,7 +58,7 @@ export async function POST(
   // (timeouts). Higher roles (service+) pass through — the gateway's own
   // whitelist still gates everything on the equipment side.
   if (role === "operator") {
-    const args = buildOperatorArgs(body.module, body.command, body.args?.arg1);
+    const args = buildOperatorArgs(body.module, body.command, body.args);
     if (!args) {
       return NextResponse.json(
         { error: "Acción no permitida para el rol operario" },

@@ -28,7 +28,9 @@ def _make_valid_command(**overrides) -> CommandPayload:
         "command_id": overrides.get("command_id", "cmd-001"),
         "module": overrides.get("module", "generator"),
         "command": overrides.get("command", "set_hv_state"),
-        "args": overrides.get("args", {}),
+        # set_hv_state declares one positional arg, so the generic "valid
+        # command" used across these tests has to carry it (0 = HV off).
+        "args": overrides.get("args", {"arg1": "0"}),
         "expires_at": overrides.get("expires_at", expires),
     }
     signature = overrides.get("signature", _sign_command(base))
@@ -89,7 +91,7 @@ def test_out_of_range_args_rejected(validator):
     cmd = _make_valid_command(
         command_id="cmd-range",
         command="set_voltage_and_current",
-        args={"voltage_kv": 999, "current_ua": 50},
+        args={"arg1": "999", "arg2": "50"},
     )
     result = validator.validate(cmd)
     assert result.ok is False
@@ -132,7 +134,7 @@ def test_valid_command_with_args_passes(validator):
     cmd = _make_valid_command(
         command_id="cmd-args",
         command="set_voltage_and_current",
-        args={"voltage_kv": 30, "current_ua": 100},
+        args={"arg1": "30", "arg2": "100"},
     )
     result = validator.validate(cmd)
     assert result.ok is True
@@ -475,6 +477,154 @@ def test_vacuum_planned_era_commands_rejected(validator):
         result = validator.validate(cmd)
         assert result.ok is False
         assert "whitelist" in result.reason.lower()
+
+
+def test_set_hv_state_valid_values(validator):
+    for i, state in enumerate(("0", "1")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-hv-{i}",
+            module="generator",
+            command="set_hv_state",
+            args={"arg1": state},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{state}: {result.reason}"
+        validator._last_command_times.clear()
+
+
+def test_set_hv_state_invalid_value_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-hv-bad",
+        module="generator",
+        command="set_hv_state",
+        args={"arg1": "true"},  # the equipment wants an int, not a bool string
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_standby_valid_without_args(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-standby",
+        module="generator",
+        command="standby",
+        args={},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_standby_with_args_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-standby-args",
+        module="generator",
+        command="standby",
+        args={"arg1": "20"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "takes no arguments" in result.reason
+
+
+def test_set_voltage_within_range(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-kv",
+        module="generator",
+        command="set_voltage",
+        args={"arg1": "20"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_set_voltage_above_max_rejected(validator):
+    # MAX_VOLTAGE on the equipment is 50 kV.
+    cmd = _make_valid_command(
+        command_id="cmd-kv-bad",
+        module="generator",
+        command="set_voltage",
+        args={"arg1": "60"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "out of range" in result.reason.lower()
+
+
+def test_set_current_bounded_below_equipment_max(validator):
+    # The equipment's MAX_CURRENT is 2000 uA, but set_current has no power
+    # guard, so the gateway caps it at the current that respects MAX_POWER
+    # even at MAX_VOLTAGE (50 W / 50 kV = 1000 uA).
+    ok = _make_valid_command(
+        command_id="cmd-ua-ok",
+        module="generator",
+        command="set_current",
+        args={"arg1": "1000"},
+    )
+    assert validator.validate(ok).ok is True
+    validator._last_command_times.clear()
+
+    too_high = _make_valid_command(
+        command_id="cmd-ua-bad",
+        module="generator",
+        command="set_current",
+        args={"arg1": "1500"},
+    )
+    result = validator.validate(too_high)
+    assert result.ok is False
+    assert "out of range" in result.reason.lower()
+
+
+def test_set_voltage_and_current_range_is_actually_enforced(validator):
+    # Regression: the range for this command used to be keyed by
+    # "voltage_kv"/"current_ua", names the positional protocol never sends, so
+    # the check silently never ran and any value passed.
+    cmd = _make_valid_command(
+        command_id="cmd-kvua-bad",
+        module="generator",
+        command="set_voltage_and_current",
+        args={"arg1": "999", "arg2": "100"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "out of range" in result.reason.lower()
+
+
+def test_set_voltage_and_current_accepts_full_current_range(validator):
+    # Unlike set_current, here the equipment clamps power itself.
+    cmd = _make_valid_command(
+        command_id="cmd-kvua-ok",
+        module="generator",
+        command="set_voltage_and_current",
+        args={"arg1": "20", "arg2": "2000"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_set_voltage_and_current_missing_second_arg_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-kvua-noarg",
+        module="generator",
+        command="set_voltage_and_current",
+        args={"arg1": "20"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "Missing required argument" in result.reason
+
+
+def test_generator_power_not_whitelisted_for_cloud(validator):
+    # Cutting the supply is a service action, not an operator one.
+    cmd = _make_valid_command(
+        command_id="cmd-power",
+        module="generator",
+        command="power",
+        args={"arg1": "false"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "whitelist" in result.reason.lower()
 
 
 def test_sentinel_ok_allows_command(validator, mock_db_reader):

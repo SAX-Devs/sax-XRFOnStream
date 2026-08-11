@@ -9,6 +9,7 @@ import { ModuleSection, summaryOf } from "./module-section";
 import { InterchangerOptions } from "./interchanger-options";
 import { CirculationOptions } from "./circulation-options";
 import { VacuumOptions } from "./vacuum-options";
+import { GeneratorOptions } from "./generator-options";
 import { CommandHistory } from "./command-history";
 import { useScadaTelemetry } from "@/hooks/use-scada-telemetry";
 import { useTelemetry } from "@/hooks/use-telemetry";
@@ -37,6 +38,7 @@ const MODULES: { key: ActionableModule; title: string }[] = [
   { key: "interchanger", title: "Interchanger" },
   { key: "circulation", title: "Circulación" },
   { key: "vacuum", title: "Vacío" },
+  { key: "generator", title: "Generador" },
 ];
 
 export function OperatorScreen({
@@ -50,6 +52,7 @@ export function OperatorScreen({
   const interchanger = useTelemetry(deviceId, "interchanger");
   const circulation = useTelemetry(deviceId, "circulation");
   const vacuum = useTelemetry(deviceId, "vacuum");
+  const generator = useTelemetry(deviceId, "generator");
   const { actions, run, requestCancel, dismiss } = useActionRunner(deviceId);
 
   // Every module starts collapsed: opening the screen shows the equipment and
@@ -87,6 +90,7 @@ export function OperatorScreen({
   const i = interchanger.data;
   const c = circulation.data;
   const v = vacuum.data;
+  const g = generator.data;
 
   const summaries: Record<ActionableModule, string> = {
     interchanger: summaryOf(
@@ -103,6 +107,11 @@ export function OperatorScreen({
       v?.atmospheric_status,
       v ? `${Number(v.vacuum_sensor ?? 0).toFixed(1)} kPa` : null,
       v ? `bombas ${v.vacuum_pump_1 || v.vacuum_pump_2 ? "ON" : "OFF"}` : null
+    ),
+    generator: summaryOf(
+      g ? (g.hv_on ? "HV ON" : "HV OFF") : null,
+      g ? `${Number(g.tube_high_voltage_kv ?? 0).toFixed(0)} kV` : null,
+      g ? `${Number(g.beam_current_ua ?? 0).toFixed(0)} µA` : null
     ),
   };
 
@@ -198,6 +207,19 @@ export function OperatorScreen({
                     run("vacuum", command, args, label, timeoutMs)
                   }
                   onDismiss={() => dismiss("vacuum")}
+                  focusSignal={focusSignal}
+                />
+              )}
+              {m.key === "generator" && (
+                <GeneratorOptions
+                  data={generator.data}
+                  interlocks={interchanger.data}
+                  action={actions["generator"] ?? null}
+                  disabled={!provisioned}
+                  onRun={(command, args, label, timeoutMs) =>
+                    run("generator", command, args, label, timeoutMs)
+                  }
+                  onDismiss={() => dismiss("generator")}
                   focusSignal={focusSignal}
                 />
               )}

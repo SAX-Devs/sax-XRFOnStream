@@ -32,11 +32,11 @@ export interface GeneratorData {
   overpower_fault: boolean;
   source_undervoltage_fault: boolean;
   sic_temperature_c: number;
-  sic_24v_monitor: number;
+  sic_24v_monitor_v: number;
   tube_high_voltage_kv: number;
   beam_current_ua: number;
   filament_current_ma: number;
-  filament_voltage: number;
+  filament_voltage_v: number;
   hv_board_temperature_c: number;
   dac_a_tubevoltage_kv: number;
   dac_b_tubecurrent_ua: number;

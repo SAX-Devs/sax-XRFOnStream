@@ -16,6 +16,8 @@ export interface ActionOption {
    * capacity left). The reason replaces the hint so the operator sees WHY.
    */
   disabledReason?: string;
+  /** Positional args beyond arg1, for actions that take more than one. */
+  extraArgs?: Record<string, string>;
 }
 
 export type StateTone = "ok" | "info" | "moving" | "warn" | "unknown";
@@ -39,6 +41,16 @@ interface ActionCardProps {
   /** Soft precondition warning (equipment still verifies on its side). */
   warning?: string | null;
   options: ActionOption[];
+  /**
+   * Replaces the option grid with a custom control — for parameters that are
+   * genuinely continuous (tube kV / µA) and would be misrepresented by a
+   * handful of invented presets. Receives a submit callback that routes
+   * through the same inline-confirm flow as the buttons.
+   */
+  renderInput?: (
+    submit: (option: ActionOption) => void,
+    disabled: boolean
+  ) => React.ReactNode;
   /** Option grid columns — use 1 for single-action cards. Default 2. */
   optionColumns?: 1 | 2;
   /** Hint shown on the option the equipment already reports. */
@@ -81,6 +93,7 @@ export function ActionCard({
   requirement,
   warning,
   options,
+  renderInput,
   optionColumns = 2,
   currentHint = "estado actual",
   tone = "normal",
@@ -259,6 +272,8 @@ export function ActionCard({
                 ✕
               </button>
             </div>
+          ) : renderInput ? (
+            renderInput(setPendingOption, interactionBlocked)
           ) : (
             <div
               className={`grid gap-2 ${

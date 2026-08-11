@@ -15,7 +15,16 @@ from src.db_reader import DbReader
 logger = logging.getLogger("edge-gateway.command-validator")
 
 COMMAND_WHITELIST: dict[str, list[str]] = {
-    "generator": ["set_hv_state", "set_voltage_and_current", "power"],
+    # Reconciled with the real generator_action catalog (operator subset).
+    # "power" is intentionally NOT here: cutting the supply is a service
+    # action, not an operator one.
+    "generator": [
+        "set_hv_state",
+        "standby",
+        "set_voltage",
+        "set_current",
+        "set_voltage_and_current",
+    ],
     # Reconciled with the real vacuum_action catalog (operator subset). The
     # previous pump_control/valve_control were planned-era names; the real
     # tasks are open_valve, close_valve, pump_switch, emergency_purge,
@@ -42,10 +51,27 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
     "auxiliary": ["battery_test"],
 }
 
+# Ranges are keyed by the POSITIONAL argument name the protocol actually uses
+# (arg1..arg5 of the equipment's `command` table). The previous
+# set_voltage_and_current entry was keyed by "voltage_kv"/"current_ua", names
+# that are never sent, so that check silently never ran.
 ARGUMENT_RANGES: dict[str, dict[str, tuple[float, float]]] = {
+    # Generator limits read from the equipment's GENERATOR_CONFIG:
+    # MAX_VOLTAGE=50 kV, MAX_CURRENT=2000 uA, MAX_POWER=50 W.
+    "set_voltage": {
+        "arg1": (0, 50),
+    },
+    # set_current has no power guard of its own (only set_voltage_and_current
+    # clamps power), so it is bounded to the current that respects MAX_POWER
+    # even at MAX_VOLTAGE: 50 W / 50 kV = 1000 uA.
+    "set_current": {
+        "arg1": (0, 1000),
+    },
+    # Here the equipment clamps the pair to MAX_POWER itself, so the full
+    # current range is safe.
     "set_voltage_and_current": {
-        "voltage_kv": (0, 50),
-        "current_ua": (0, 200),
+        "arg1": (0, 50),
+        "arg2": (0, 2000),
     },
     "set_target_temperature": {
         "temperature_c": (15, 35),
@@ -85,6 +111,9 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
     # task may be targeted. Verified on the equipment: of the operator set,
     # only tank_percentage_fill takes cancel_event.
     "cancel": {"arg1": ("tank_percentage_fill",)},
+    # set_hv_state(state: int): 1 = radiate, 0 = stop. The equipment itself
+    # refuses to turn HV on unless the door and chamber locks are engaged.
+    "set_hv_state": {"arg1": ("0", "1")},
     # The 5 branches of Vacuum.set_atmospheric_condition; anything else hits
     # the final else and raises ValueError("Unknown status") on the equipment.
     "set_atmospheric_condition": {
@@ -116,6 +145,10 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "set_atmospheric_condition": ("arg1",),
     "tank_percentage_fill": ("arg1",),
     "cancel": ("arg1",),
+    "set_hv_state": ("arg1",),
+    "set_voltage": ("arg1",),
+    "set_current": ("arg1",),
+    "set_voltage_and_current": ("arg1", "arg2"),
 }
 
 # Tasks whose declared python_data_type is {None}: the equipment's transformer
@@ -123,11 +156,15 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
 NO_ARG_COMMANDS: dict[str, tuple[str, ...]] = {
     "circulation": ("empty_tank",),
     "vacuum": ("emergency_purge",),
+    "generator": ("standby",),
 }
 
 RATE_LIMITS: dict[tuple[str, str], float] = {
     ("generator", "set_hv_state"): 5.0,
     ("generator", "set_voltage_and_current"): 3.0,
+    ("generator", "set_voltage"): 3.0,
+    ("generator", "set_current"): 3.0,
+    ("generator", "standby"): 10.0,
     ("generator", "power"): 10.0,
     # Reaching Vacuum waits ~35s for a pressure target; re-firing meanwhile is
     # always a mistake. The emergency purge runs a ~15s valve sequence.
