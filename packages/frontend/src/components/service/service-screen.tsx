@@ -1,123 +1,130 @@
 "use client";
 
-import { ScadaScreen } from "@/components/scada/scada-screen";
+import { useEffect, useState } from "react";
+import { ModuleNav } from "./module-nav";
+import { ModuleWorkspace } from "./module-workspace";
+import { RawTelemetry } from "./raw-telemetry";
+import { ModuleActivity } from "./module-activity";
+import { moduleFacts, SERVICE_MODULES, type ModuleFacts } from "./service-modules";
 import { useTelemetry } from "@/hooks/use-telemetry";
+import { useEquipmentState } from "@/hooks/use-equipment-state";
+import type { StatusLevel } from "@/components/scada/status-panel";
+import type { ModuleName } from "@/types/telemetry";
 
-/** Format a numeric telemetry field, falling back to em-dash while loading/absent. */
-function n(v: number | undefined, digits = 1, unit = ""): string {
-  if (typeof v !== "number") return "—";
-  const s = v.toFixed(digits);
-  return unit ? `${s} ${unit}` : s;
-}
+/**
+ * Service screen — the technician's workspace. Deliberately NOT a variation
+ * of the Status screen: no SCADA diagram, no curated operator cards.
+ *
+ * Layout (option A, approved):
+ *   [ module navigator | selected module workspace | raw telemetry + activity ]
+ *
+ * The navigator plays the "index" role (health LED + live summary per module);
+ * the workspace shows curated KPIs, active faults and — as SAX defines each
+ * module's service subset — the action rows; the right column is the evidence:
+ * every raw field of the module (flashing on change) and the module's command
+ * activity, so cause and effect stay side by side.
+ */
 
-/** Format a boolean fault/flag as an OK/fault word. */
-function flag(v: boolean | undefined, ok: string, bad: string): string {
-  if (typeof v !== "boolean") return "—";
-  return v ? bad : ok;
-}
+/** Equipment operational state → health row (same map the Status screen uses). */
+const EQUIPMENT_ROW: Record<string, { status: StatusLevel; label: string }> = {
+  measuring: { status: "ok", label: "Midiendo" },
+  standby: { status: "ok", label: "Standby" },
+  idle: { status: "ok", label: "Reposo" },
+  initializing: { status: "ok", label: "Inicializando" },
+  error: { status: "error", label: "ERROR" },
+  offline: { status: "error", label: "Desconectado" },
+  unknown: { status: "warning", label: "Desconocido" },
+};
 
 export function ServiceScreen({ deviceId }: { deviceId: string }) {
-  // Service-only diagnostics read the raw module telemetry directly.
-  const gen = useTelemetry(deviceId, "generator").data;
-  const det = useTelemetry(deviceId, "detector").data;
-  const aux = useTelemetry(deviceId, "auxiliary").data;
+  const generator = useTelemetry(deviceId, "generator");
+  const vacuum = useTelemetry(deviceId, "vacuum");
+  const circulation = useTelemetry(deviceId, "circulation");
+  const interchanger = useTelemetry(deviceId, "interchanger");
+  const detector = useTelemetry(deviceId, "detector");
+  const tempControl = useTelemetry(deviceId, "temp_control");
+  const auxiliary = useTelemetry(deviceId, "auxiliary");
+  const equip = useEquipmentState(deviceId);
 
-  return (
-    <div className="space-y-3">
-      {/* Service mode banner */}
-      <div className="flex items-center gap-3 rounded-2xl border-2 border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-600/5 px-4 py-2.5 backdrop-blur-md">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-500/40">
-          <svg
-            className="h-4 w-4 text-amber-300"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-          </svg>
-        </div>
-        <div className="flex-1">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-amber-200">
-            Modo Servicio
-          </h2>
-          <p className="text-[11px] text-amber-200/70">
-            Acceso completo a controles del equipo. Cambios afectan operación en
-            tiempo real — proceder con precaución.
-          </p>
-        </div>
-        <span className="font-mono text-[10px] uppercase tracking-wider text-amber-300/60">
-          rol: service
-        </span>
-      </div>
+  const [selected, setSelected] = useState<ModuleName>("generator");
 
-      {/* Service-mode SCADA (reuses the same diagram with full controls) */}
-      <ScadaScreen deviceId={deviceId} userLabel="Técnico" userRole="service" />
+  // Freshness/health ages truthfully even when no new data arrives.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 15_000);
+    return () => clearInterval(t);
+  }, []);
 
-      {/* Auxiliary diagnostic panel (only visible in service mode) */}
-      <div className="grid grid-cols-3 gap-3">
-        <DiagnosticCard
-          title="Generador Rx"
-          rows={[
-            ["HV ramp time", n(gen?.ramp_time_ms, 0, "ms")],
-            ["Filament I", n(gen?.filament_current_ma, 0, "mA")],
-            ["SiC temp", n(gen?.sic_temperature_c, 1, "°C")],
-            ["Interlock", flag(gen?.interlock_open, "OK", "ABIERTO")],
-            ["Overvoltage", flag(gen?.overvoltage_fault, "OK", "FALLA")],
-          ]}
-        />
-        <DiagnosticCard
-          title="Detector"
-          rows={[
-            ["MCA length", n(det?.mca_length, 0)],
-            ["Gain", n(det?.gain, 2)],
-            ["Bin width", n(det?.mca_bin_width, 2)],
-            ["Gain trim", n(det?.gain_trim, 2)],
-            ["Temp", n(det?.temperature, 1, "°C")],
-          ]}
-        />
-        <DiagnosticCard
-          title="Auxiliar"
-          rows={[
-            ["Bat voltage", n(aux?.bat_vol, 1, "V")],
-            ["Bat fail", flag(aux?.bat_fail, "no", "SÍ")],
-            ["DC OK", flag(aux?.dc_ok, "FALLA", "OK")],
-            ["Tank pressure (high)", flag(aux?.tank_pressure_high, "OK", "ALTA")],
-            ["Tank pressure (low)", flag(aux?.tank_pressure_low, "OK", "BAJA")],
-          ]}
-        />
-      </div>
-    </div>
+  const telemetry: Record<
+    ModuleName,
+    { data: unknown; lastUpdated: Date | null; errored: boolean }
+  > = {
+    generator,
+    vacuum,
+    circulation,
+    interchanger,
+    detector,
+    temp_control: tempControl,
+    auxiliary,
+  };
+
+  const facts = {} as Record<ModuleName, ModuleFacts>;
+  const hasData = {} as Record<ModuleName, boolean>;
+  for (const m of SERVICE_MODULES) {
+    facts[m.key] = moduleFacts(m.key, telemetry[m.key].data ?? null);
+    hasData[m.key] = telemetry[m.key].data != null;
+  }
+
+  // System health, same semantics as the Status screen.
+  const newest = Math.max(
+    0,
+    ...SERVICE_MODULES.map((m) => telemetry[m.key].lastUpdated?.getTime() ?? 0)
   );
-}
+  const ageMs = newest > 0 ? Date.now() - newest : null;
+  const internet: StatusLevel =
+    ageMs === null ? "warning" : ageMs < 60_000 ? "ok" : ageMs < 300_000 ? "warning" : "error";
+  const database: StatusLevel = SERVICE_MODULES.some(
+    (m) => telemetry[m.key].errored
+  )
+    ? "error"
+    : "ok";
+  const equipment =
+    EQUIPMENT_ROW[equip.state ?? "unknown"] ?? EQUIPMENT_ROW.unknown;
 
-function DiagnosticCard({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: [string, string][];
-}) {
+  const current = SERVICE_MODULES.find((m) => m.key === selected)!;
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/60 p-3 backdrop-blur-md">
-      <h3 className="mb-2 border-b border-white/5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">
-        {title}
-      </h3>
-      <dl className="space-y-1">
-        {rows.map(([label, value]) => (
-          <div
-            key={label}
-            className="flex items-center justify-between text-[11px]"
-          >
-            <dt className="text-slate-400">{label}</dt>
-            <dd className="font-mono font-semibold text-slate-200 tabular-nums">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
+    <div className="grid grid-cols-[210px_minmax(0,1fr)_330px] items-start gap-3">
+      {/* Left — module navigator + system health */}
+      <ModuleNav
+        facts={facts}
+        hasData={hasData}
+        selected={selected}
+        onSelect={setSelected}
+        health={{
+          internet,
+          database,
+          equipment: equipment.status,
+          equipmentLabel: equipment.label,
+        }}
+      />
+
+      {/* Center — selected module workspace */}
+      <ModuleWorkspace
+        title={current.title}
+        facts={facts[selected]}
+        hasData={hasData[selected]}
+      />
+
+      {/* Right — evidence: raw telemetry + module activity */}
+      <div className="flex flex-col gap-3">
+        <RawTelemetry
+          moduleTitle={current.title}
+          data={(telemetry[selected].data as Record<string, unknown>) ?? null}
+          lastUpdated={telemetry[selected].lastUpdated}
+        />
+        <ModuleActivity deviceId={deviceId} module={selected} />
+      </div>
     </div>
   );
 }
