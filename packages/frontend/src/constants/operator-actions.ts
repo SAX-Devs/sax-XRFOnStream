@@ -147,7 +147,7 @@ export const OPERATOR_ACTIONS: Record<
   },
 };
 
-function argIsValid(spec: ArgSpec, raw: unknown): string | null {
+export function argIsValid(spec: ArgSpec, raw: unknown): string | null {
   const value = String(raw ?? "");
   if (value === "") return null;
   if (spec.kind === "enum") {

@@ -1,4 +1,5 @@
 import { ServiceScreen } from "@/components/service/service-screen";
+import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/session";
 
 export default async function ServicePage({
@@ -8,5 +9,14 @@ export default async function ServicePage({
 }) {
   await requireRole("service");
   const { id } = await params;
-  return <ServiceScreen deviceId={id} />;
+  const supabase = await createClient();
+  const { data: device } = await supabase
+    .from("devices")
+    .select("provisioned_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  return (
+    <ServiceScreen deviceId={id} provisioned={device?.provisioned_at != null} />
+  );
 }

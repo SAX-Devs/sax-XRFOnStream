@@ -4,6 +4,7 @@ import { signCommand } from "@/lib/hmac/sign";
 import { publishToMqtt } from "@/lib/emqx/publish";
 import { hasMinimumRole } from "@/constants/roles";
 import { buildOperatorArgs } from "@/constants/operator-actions";
+import { buildServiceArgs } from "@/constants/service-actions";
 import type { UserRole } from "@/types/auth";
 
 interface CommandBody {
@@ -53,15 +54,24 @@ export async function POST(
     );
   }
 
-  // Per-action authorization: OPERATORS may only fire actions from the
-  // explicit catalog, with validated arg1 and server-forced extra args
-  // (timeouts). Higher roles (service+) pass through — the gateway's own
-  // whitelist still gates everything on the equipment side.
-  if (role === "operator") {
-    const args = buildOperatorArgs(body.module, body.command, body.args);
+  // Per-action authorization, catalog per role: operators fire only the
+  // operator catalog; service fires operator ∪ service. Both get every
+  // positional argument validated and rebuilt server-side. Admin roles pass
+  // through — the gateway's own whitelist still gates everything on the
+  // equipment side.
+  if (role === "operator" || role === "service") {
+    const args =
+      role === "operator"
+        ? buildOperatorArgs(body.module, body.command, body.args)
+        : buildServiceArgs(body.module, body.command, body.args);
     if (!args) {
       return NextResponse.json(
-        { error: "Acción no permitida para el rol operario" },
+        {
+          error:
+            role === "operator"
+              ? "Acción no permitida para el rol operario"
+              : "Acción no permitida para el rol servicio",
+        },
         { status: 403 }
       );
     }

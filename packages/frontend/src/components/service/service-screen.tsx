@@ -6,10 +6,12 @@ import { ModuleWorkspace } from "./module-workspace";
 import { RawTelemetry } from "./raw-telemetry";
 import { ModuleActivity } from "./module-activity";
 import { moduleFacts, SERVICE_MODULES, type ModuleFacts } from "./service-modules";
+import { GeneratorServiceActions } from "./generator-actions";
 import { useTelemetry } from "@/hooks/use-telemetry";
 import { useEquipmentState } from "@/hooks/use-equipment-state";
+import { useActionRunner } from "@/hooks/use-action-runner";
 import type { StatusLevel } from "@/components/scada/status-panel";
-import type { ModuleName } from "@/types/telemetry";
+import type { GeneratorData, InterchangerData, ModuleName } from "@/types/telemetry";
 
 /**
  * Service screen — the technician's workspace. Deliberately NOT a variation
@@ -36,7 +38,13 @@ const EQUIPMENT_ROW: Record<string, { status: StatusLevel; label: string }> = {
   unknown: { status: "warning", label: "Desconocido" },
 };
 
-export function ServiceScreen({ deviceId }: { deviceId: string }) {
+export function ServiceScreen({
+  deviceId,
+  provisioned,
+}: {
+  deviceId: string;
+  provisioned: boolean;
+}) {
   const generator = useTelemetry(deviceId, "generator");
   const vacuum = useTelemetry(deviceId, "vacuum");
   const circulation = useTelemetry(deviceId, "circulation");
@@ -45,6 +53,7 @@ export function ServiceScreen({ deviceId }: { deviceId: string }) {
   const tempControl = useTelemetry(deviceId, "temp_control");
   const auxiliary = useTelemetry(deviceId, "auxiliary");
   const equip = useEquipmentState(deviceId);
+  const { actions, run, dismiss } = useActionRunner(deviceId);
 
   const [selected, setSelected] = useState<ModuleName>("generator");
 
@@ -114,7 +123,20 @@ export function ServiceScreen({ deviceId }: { deviceId: string }) {
         title={current.title}
         facts={facts[selected]}
         hasData={hasData[selected]}
-      />
+      >
+        {selected === "generator" ? (
+          <GeneratorServiceActions
+            data={generator.data as GeneratorData | null}
+            interlocks={interchanger.data as InterchangerData | null}
+            action={actions["generator"] ?? null}
+            disabled={!provisioned}
+            onRun={(command, args, label, timeoutMs) =>
+              run("generator", command, args, label, timeoutMs)
+            }
+            onDismiss={() => dismiss("generator")}
+          />
+        ) : null}
+      </ModuleWorkspace>
 
       {/* Right — evidence: raw telemetry + module activity */}
       <div className="flex flex-col gap-3">

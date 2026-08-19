@@ -614,17 +614,106 @@ def test_set_voltage_and_current_missing_second_arg_rejected(validator):
     assert "Missing required argument" in result.reason
 
 
-def test_generator_power_not_whitelisted_for_cloud(validator):
-    # Cutting the supply is a service action, not an operator one.
+def test_generator_power_valid_values(validator):
+    # Service action since 2026-08-19; role separation lives in the cloud
+    # Route Handler, the gateway just validates the argument.
+    for i, state in enumerate(("true", "false")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-power-{i}",
+            module="generator",
+            command="power",
+            args={"arg1": state},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{state}: {result.reason}"
+        validator._last_command_times.clear()
+
+
+def test_generator_power_bad_value_rejected(validator):
     cmd = _make_valid_command(
-        command_id="cmd-power",
+        command_id="cmd-power-bad",
         module="generator",
         command="power",
-        args={"arg1": "false"},
+        args={"arg1": "1"},  # bool string expected, not int
     )
     result = validator.validate(cmd)
     assert result.ok is False
-    assert "whitelist" in result.reason.lower()
+    assert "not allowed" in result.reason
+
+
+def test_set_hv_state_service_valid(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-hvsvc",
+        module="generator",
+        command="set_hv_state_service",
+        args={"arg1": "0"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_reset_faults_takes_no_args(validator):
+    ok = _make_valid_command(
+        command_id="cmd-rf",
+        module="generator",
+        command="reset_faults",
+        args={},
+    )
+    assert validator.validate(ok).ok is True
+    validator._last_command_times.clear()
+
+    with_args = _make_valid_command(
+        command_id="cmd-rf-args",
+        module="generator",
+        command="reset_faults",
+        args={"arg1": "1"},
+    )
+    result = validator.validate(with_args)
+    assert result.ok is False
+    assert "takes no arguments" in result.reason
+
+
+def test_filament_setters_ranges_enforced(validator):
+    # MAX_FIL_CURRENT=3500, MAX_FIL_PREHEAT=2000 (equipment Config.ini).
+    ok = _make_valid_command(
+        command_id="cmd-fil-ok",
+        module="generator",
+        command="set_filament_current_limit",
+        args={"arg1": "3200"},
+    )
+    assert validator.validate(ok).ok is True
+    validator._last_command_times.clear()
+
+    too_high = _make_valid_command(
+        command_id="cmd-fil-bad",
+        module="generator",
+        command="set_filament_preheat",
+        args={"arg1": "2500"},
+    )
+    result = validator.validate(too_high)
+    assert result.ok is False
+    assert "out of range" in result.reason.lower()
+
+
+def test_filament_ramp_time_valid_and_bounded(validator):
+    ok = _make_valid_command(
+        command_id="cmd-ramp-ok",
+        module="generator",
+        command="set_filament_ramp_time",
+        args={"arg1": "1", "arg2": "3000"},
+    )
+    assert validator.validate(ok).ok is True, validator.validate(ok).reason
+    validator._last_command_times.clear()
+
+    too_long = _make_valid_command(
+        command_id="cmd-ramp-bad",
+        module="generator",
+        command="set_filament_ramp_time",
+        args={"arg1": "1", "arg2": "20000"},
+    )
+    result = validator.validate(too_long)
+    assert result.ok is False
+    assert "out of range" in result.reason.lower()
 
 
 def test_sentinel_ok_allows_command(validator, mock_db_reader):

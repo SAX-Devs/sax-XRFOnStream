@@ -15,15 +15,22 @@ from src.db_reader import DbReader
 logger = logging.getLogger("edge-gateway.command-validator")
 
 COMMAND_WHITELIST: dict[str, list[str]] = {
-    # Reconciled with the real generator_action catalog (operator subset).
-    # "power" is intentionally NOT here: cutting the supply is a service
-    # action, not an operator one.
+    # Reconciled with the real generator_action catalog. The full service
+    # subset (SAX-defined 2026-08-19); role separation happens in the cloud
+    # Route Handler — operators only reach the first five, service reaches
+    # all. The whitelist is the catalog of anything the cloud may ever send.
     "generator": [
         "set_hv_state",
         "standby",
         "set_voltage",
         "set_current",
         "set_voltage_and_current",
+        "power",
+        "set_hv_state_service",
+        "reset_faults",
+        "set_filament_current_limit",
+        "set_filament_preheat",
+        "set_filament_ramp_time",
     ],
     # Reconciled with the real vacuum_action catalog (operator subset). The
     # previous pump_control/valve_control were planned-era names; the real
@@ -73,6 +80,19 @@ ARGUMENT_RANGES: dict[str, dict[str, tuple[float, float]]] = {
         "arg1": (0, 50),
         "arg2": (0, 2000),
     },
+    # Filament limits from the equipment's GENERATOR_CONFIG:
+    # MAX_FIL_CURRENT=3500 mA, MAX_FIL_PREHEAT=2000 mA.
+    "set_filament_current_limit": {
+        "arg1": (0, 3500),
+    },
+    "set_filament_preheat": {
+        "arg1": (0, 2000),
+    },
+    # arg2 = ramp time in ms (generator command "47" accepts 0-10000). The
+    # coupled rule (disable→0, enable→>0) is enforced by the equipment itself.
+    "set_filament_ramp_time": {
+        "arg2": (0, 10000),
+    },
     "set_target_temperature": {
         "temperature_c": (15, 35),
     },
@@ -114,6 +134,12 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
     # set_hv_state(state: int): 1 = radiate, 0 = stop. The equipment itself
     # refuses to turn HV on unless the door and chamber locks are engaged.
     "set_hv_state": {"arg1": ("0", "1")},
+    # The service variant SKIPS that interlock check (maintenance bypass).
+    "set_hv_state_service": {"arg1": ("0", "1")},
+    # power(on_state: bool) — the generator's 24V supply relay.
+    "power": {"arg1": ("true", "false")},
+    # set_filament_ramp_time(enable: 0/1, ramp_time_ms).
+    "set_filament_ramp_time": {"arg1": ("0", "1")},
     # The 5 branches of Vacuum.set_atmospheric_condition; anything else hits
     # the final else and raises ValueError("Unknown status") on the equipment.
     "set_atmospheric_condition": {
@@ -146,9 +172,14 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "tank_percentage_fill": ("arg1",),
     "cancel": ("arg1",),
     "set_hv_state": ("arg1",),
+    "set_hv_state_service": ("arg1",),
+    "power": ("arg1",),
     "set_voltage": ("arg1",),
     "set_current": ("arg1",),
     "set_voltage_and_current": ("arg1", "arg2"),
+    "set_filament_current_limit": ("arg1",),
+    "set_filament_preheat": ("arg1",),
+    "set_filament_ramp_time": ("arg1", "arg2"),
 }
 
 # Tasks whose declared python_data_type is {None}: the equipment's transformer
@@ -156,16 +187,21 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
 NO_ARG_COMMANDS: dict[str, tuple[str, ...]] = {
     "circulation": ("empty_tank",),
     "vacuum": ("emergency_purge",),
-    "generator": ("standby",),
+    "generator": ("standby", "reset_faults"),
 }
 
 RATE_LIMITS: dict[tuple[str, str], float] = {
     ("generator", "set_hv_state"): 5.0,
+    ("generator", "set_hv_state_service"): 5.0,
     ("generator", "set_voltage_and_current"): 3.0,
     ("generator", "set_voltage"): 3.0,
     ("generator", "set_current"): 3.0,
     ("generator", "standby"): 10.0,
     ("generator", "power"): 10.0,
+    ("generator", "reset_faults"): 5.0,
+    ("generator", "set_filament_current_limit"): 3.0,
+    ("generator", "set_filament_preheat"): 3.0,
+    ("generator", "set_filament_ramp_time"): 3.0,
     # Reaching Vacuum waits ~35s for a pressure target; re-firing meanwhile is
     # always a mistake. The emergency purge runs a ~15s valve sequence.
     ("vacuum", "set_atmospheric_condition"): 10.0,
