@@ -3,6 +3,7 @@
 import json
 import logging
 import threading
+import time
 from datetime import datetime, timezone
 
 from src.config import GatewayConfig
@@ -21,6 +22,15 @@ MODULES = [
     "auxiliary_status",
 ]
 
+# Change-only publishing alone starves static modules: interchanger_status can
+# sit unchanged for WEEKS (arm parked, locks engaged), the cloud's 3-day
+# retention purge eventually deletes its last row, and the dashboard renders
+# "no data" — which the UI defaults displayed as locks OPEN (incident
+# 2026-08-18). Republishing each module at least this often keeps the newest
+# cloud row always younger than the retention window, at a negligible cost
+# (worst case 7 extra messages every 10 min ≈ 1 MB/day).
+KEEPALIVE_S = 600.0
+
 
 class TelemetryPublisher:
     def __init__(
@@ -35,6 +45,7 @@ class TelemetryPublisher:
         self._db = db_reader
         self._equipment_state_pub = equipment_state_pub
         self._last_snapshots: dict[str, dict] = {}
+        self._last_published: dict[str, float] = {}
         self._topic_prefix = f"sax/{config.tenant_id}/{config.device_id}/telemetry"
 
     def _module_short_name(self, table_name: str) -> str:
@@ -51,10 +62,13 @@ class TelemetryPublisher:
             if row is None:
                 continue
 
-            if row == self._last_snapshots.get(table):
+            now = time.monotonic()
+            unchanged = row == self._last_snapshots.get(table)
+            if unchanged and now - self._last_published.get(table, 0.0) < KEEPALIVE_S:
                 continue
 
             self._last_snapshots[table] = row
+            self._last_published[table] = now
             module_name = self._module_short_name(table)
             payload = {
                 "device_id": self._config.device_id,
