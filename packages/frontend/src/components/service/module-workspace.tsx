@@ -30,9 +30,16 @@ export function ModuleWorkspace({
   children,
 }: ModuleWorkspaceProps) {
   return (
-    <div className="flex flex-col gap-3">
-      {/* Header — live KPIs */}
-      <div className="rounded-2xl border border-white/10 bg-black/60 px-4 py-3 backdrop-blur-md">
+    // Height-bounded flex column: the KPI header stays fixed while only the
+    // action area below scrolls, on its own — the offset covers the 56px top
+    // nav plus the page's top/bottom padding. overscroll-contain keeps the
+    // wheel from chaining to the page once the actions hit their end.
+    <div
+      className="flex flex-col gap-3"
+      style={{ maxHeight: "calc(100vh - 104px)" }}
+    >
+      {/* Header — live KPIs (fixed) */}
+      <div className="shrink-0 rounded-2xl border border-white/10 bg-black/60 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-bold uppercase tracking-wider text-slate-100">
             {title}
@@ -82,16 +89,18 @@ export function ModuleWorkspace({
         )}
       </div>
 
-      {/* Action area */}
-      {children ?? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/40 py-14 text-center backdrop-blur-md">
-          <span className="text-2xl text-slate-700">⚙</span>
-          <p className="mt-2 max-w-[300px] text-[12px] leading-relaxed text-slate-500">
-            Las acciones de servicio de este módulo se habilitarán en una
-            próxima actualización.
-          </p>
-        </div>
-      )}
+      {/* Action area — the only part that scrolls, independently of the page */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-color:rgba(148,163,184,0.3)_transparent] [scrollbar-width:thin]">
+        {children ?? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/40 py-14 text-center backdrop-blur-md">
+            <span className="text-2xl text-slate-700">⚙</span>
+            <p className="mt-2 max-w-[300px] text-[12px] leading-relaxed text-slate-500">
+              Las acciones de servicio de este módulo se habilitarán en una
+              próxima actualización.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

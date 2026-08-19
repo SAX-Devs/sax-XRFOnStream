@@ -82,7 +82,8 @@ export function GeneratorServiceActions({
   const busy =
     !!action && !TERMINAL_STAGES.includes(action.stage) && action.stage !== "timeout";
 
-  const rowProps = (command: string, tier: RiskTier) => ({
+  const rowProps = (command: string, title: string, tier: RiskTier) => ({
+    title,
     command,
     tier,
     inflight: action?.command === command ? action : null,
@@ -97,7 +98,7 @@ export function GeneratorServiceActions({
     <div className="space-y-4">
       <Group title="Alimentación y seguridad">
         <ActionRow
-          {...rowProps("set_hv_state", "caution")}
+          {...rowProps("set_hv_state", "Alto voltaje", "caution")}
           description="Enciende/apaga el alto voltaje (con verificación de enclavamientos)"
           requirement="Encender exige puerta y cámara cerradas; apagar siempre se permite"
           warning={!hvOn && !canRadiate ? `No va a poder encender: ${interlockReason}.` : null}
@@ -115,7 +116,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("set_hv_state_service", "critical")}
+          {...rowProps("set_hv_state_service", "Alto voltaje (bypass)", "critical")}
           description="HV on/off SIN verificar enclavamientos — bypass de servicio"
           requirement="Salta la verificación de puerta y cámara: el tubo puede emitir con el equipo abierto. Solo para mantenimiento con el área controlada."
         >
@@ -136,7 +137,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("standby", "caution")}
+          {...rowProps("standby", "Reposo", "caution")}
           description="Lleva el tubo a 20 kV / 100 µA y enciende el HV"
           requirement="Requiere enclavamientos cerrados (los verifica el equipo)"
           warning={!canRadiate ? `El equipo lo rechazará: ${interlockReason}.` : null}
@@ -151,7 +152,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("reset_faults", "normal")}
+          {...rowProps("reset_faults", "Resetear fallas", "normal")}
           description="Limpia los indicadores de falla de la fuente"
         >
           {({ request, blocked }) => (
@@ -164,7 +165,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("power", "critical")}
+          {...rowProps("power", "Alimentación de la fuente", "critical")}
           description="Relé de 24V de la fuente — corta o repone la alimentación del generador"
           requirement="Apagar con HV activo corta la emisión de golpe, sin secuencia"
         >
@@ -187,7 +188,7 @@ export function GeneratorServiceActions({
 
       <Group title="Punto de operación">
         <ActionRow
-          {...rowProps("set_voltage_and_current", "caution")}
+          {...rowProps("set_voltage_and_current", "Punto de operación", "caution")}
           description="Mueve voltaje y corriente con transición segura de potencia"
           requirement="El equipo baja la corriente, programa el voltaje y luego la corriente final; limita el par a 50 W por sí mismo"
         >
@@ -197,7 +198,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("set_voltage", "caution")}
+          {...rowProps("set_voltage", "Voltaje del tubo", "caution")}
           description="Solo el voltaje del tubo"
           requirement={`Actual: ${kv.toFixed(1)} kV · para cambios grandes usa set_voltage_and_current`}
         >
@@ -216,7 +217,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("set_current", "caution")}
+          {...rowProps("set_current", "Corriente del haz", "caution")}
           description="Solo la corriente del haz"
           requirement={`Actual: ${ua.toFixed(0)} µA · tope ${GENERATOR_LIMITS.maxCurrentUaSingle} µA: este ajuste no limita potencia, y esa es la corriente segura a cualquier voltaje`}
         >
@@ -237,7 +238,7 @@ export function GeneratorServiceActions({
 
       <Group title="Filamento">
         <ActionRow
-          {...rowProps("set_filament_current_limit", "caution")}
+          {...rowProps("set_filament_current_limit", "Límite de corriente del filamento", "caution")}
           description="Límite de corriente del filamento (DAC C)"
           requirement={`Actual: ${num(data?.dac_c_filamentcurrentlimit_ma).toFixed(0)} mA · máx del equipo 3500 mA`}
         >
@@ -256,7 +257,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("set_filament_preheat", "caution")}
+          {...rowProps("set_filament_preheat", "Precalentamiento del filamento", "caution")}
           description="Corriente de precalentamiento del filamento (DAC D)"
           requirement={`Actual: ${num(data?.dac_d_filamentpreheatcurrent_ma).toFixed(0)} mA · máx del equipo 2000 mA`}
         >
@@ -275,7 +276,7 @@ export function GeneratorServiceActions({
         </ActionRow>
 
         <ActionRow
-          {...rowProps("set_filament_ramp_time", "caution")}
+          {...rowProps("set_filament_ramp_time", "Rampa del filamento", "caution")}
           description="Habilita/deshabilita la rampa del filamento y su tiempo"
           requirement="Con rampa ON el filamento sube desde cero al encender el HV (1–10000 ms); con rampa OFF el tiempo debe ser 0"
         >

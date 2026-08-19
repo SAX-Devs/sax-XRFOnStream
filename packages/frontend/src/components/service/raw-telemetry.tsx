@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { fieldLabel } from "./field-labels";
 
 /**
  * Raw telemetry panel — every field of the selected module's *_status row,
@@ -87,7 +88,7 @@ export function RawTelemetry({ moduleTitle, data, lastUpdated }: RawTelemetryPro
     <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-white/10 px-3.5 py-2.5">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-          Telemetría cruda
+          Telemetría
         </h2>
         <span className="font-mono text-[10px] text-slate-500">
           {ageLabel(lastUpdated, now)}
@@ -110,8 +111,13 @@ export function RawTelemetry({ moduleTitle, data, lastUpdated }: RawTelemetryPro
                   flashed ? "bg-cyan-400/15" : "bg-transparent"
                 }`}
               >
-                <span className="truncate font-mono text-[10.5px] text-slate-500">
-                  {key}
+                <span className="min-w-0 truncate">
+                  <span className="text-[10.5px] text-slate-300">
+                    {fieldLabel(key)}
+                  </span>
+                  <span className="ml-1.5 font-mono text-[9px] text-slate-600">
+                    {key}
+                  </span>
                 </span>
                 <span
                   className={`shrink-0 font-mono text-[11px] tabular-nums ${

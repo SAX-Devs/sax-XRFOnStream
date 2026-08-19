@@ -37,6 +37,9 @@ export interface FirePayload {
 }
 
 interface ActionRowProps {
+  /** Readable Spanish name, shown up front. */
+  title: string;
+  /** Raw equipment task name, kept as a secondary technical reference. */
   command: string;
   description: string;
   tier: RiskTier;
@@ -63,6 +66,7 @@ interface ActionRowProps {
 }
 
 export function ActionRow({
+  title,
   command,
   description,
   tier,
@@ -115,11 +119,14 @@ export function ActionRow({
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[12px] font-semibold text-slate-200">
-              {command}
+            <span className="text-[12.5px] font-semibold text-slate-100">
+              {title}
             </span>
+            <code className="truncate font-mono text-[9px] text-slate-600">
+              {command}
+            </code>
             <span
-              className={`rounded px-1.5 py-px text-[8.5px] font-bold uppercase tracking-wider ring-1 ${badge.cls}`}
+              className={`shrink-0 rounded px-1.5 py-px text-[8.5px] font-bold uppercase tracking-wider ring-1 ${badge.cls}`}
             >
               {badge.label}
             </span>
