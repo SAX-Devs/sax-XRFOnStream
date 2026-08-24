@@ -94,6 +94,18 @@ export const SERVICE_ACTIONS: Record<
     // power(OnOff: bool) — module 24V supply.
     power: { args: [{ kind: "enum", values: ["true", "false"] }] },
   },
+  interchanger: {
+    // service_axial / service_rot(target: bool) — raw piston movers, no
+    // sensor verification (the operator usage_* have it).
+    service_axial: { args: [{ kind: "enum", values: ["true", "false"] }] },
+    service_rot: { args: [{ kind: "enum", values: ["true", "false"] }] },
+    // service_change_position(target: int 0-3) — the four axial/rot combos.
+    service_change_position: {
+      args: [{ kind: "enum", values: ["0", "1", "2", "3"] }],
+    },
+    // rele_test() — {None}.
+    rele_test: { args: [] },
+  },
   vacuum: {
     // open_valve / close_valve(valve_name: str) — the three real valves.
     open_valve: {

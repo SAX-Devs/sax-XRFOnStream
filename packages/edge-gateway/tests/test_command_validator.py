@@ -852,6 +852,62 @@ def test_circulation_led_and_power_valid(validator):
         validator._last_command_times.clear()
 
 
+def test_interchanger_service_axial_rot_valid(validator):
+    for i, cmd_name in enumerate(("service_axial", "service_rot")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-svc-{i}",
+            module="interchanger",
+            command=cmd_name,
+            args={"arg1": "true"},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{cmd_name}: {result.reason}"
+        validator._last_command_times.clear()
+
+
+def test_service_change_position_valid_and_bounded(validator):
+    for i, pos in enumerate(("0", "1", "2", "3")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-scp-{i}",
+            module="interchanger",
+            command="service_change_position",
+            args={"arg1": pos},
+        )
+        assert validator.validate(cmd).ok is True, pos
+        validator._last_command_times.clear()
+
+    bad = _make_valid_command(
+        command_id="cmd-scp-bad",
+        module="interchanger",
+        command="service_change_position",
+        args={"arg1": "4"},
+    )
+    result = validator.validate(bad)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_interchanger_rele_test_takes_no_args(validator):
+    ok = _make_valid_command(
+        command_id="cmd-relei",
+        module="interchanger",
+        command="rele_test",
+        args={},
+    )
+    assert validator.validate(ok).ok is True
+    validator._last_command_times.clear()
+
+    with_args = _make_valid_command(
+        command_id="cmd-relei-args",
+        module="interchanger",
+        command="rele_test",
+        args={"arg1": "1"},
+    )
+    result = validator.validate(with_args)
+    assert result.ok is False
+    assert "takes no arguments" in result.reason
+
+
 def test_sentinel_ok_allows_command(validator, mock_db_reader):
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},

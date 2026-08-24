@@ -9,6 +9,7 @@ import { moduleFacts, SERVICE_MODULES, type ModuleFacts } from "./service-module
 import { GeneratorServiceActions } from "./generator-actions";
 import { VacuumServiceActions } from "./vacuum-actions";
 import { CirculationServiceActions } from "./circulation-actions";
+import { InterchangerServiceActions } from "./interchanger-actions";
 import { useTelemetry } from "@/hooks/use-telemetry";
 import { useEquipmentState } from "@/hooks/use-equipment-state";
 import { useActionRunner } from "@/hooks/use-action-runner";
@@ -164,6 +165,17 @@ export function ServiceScreen({
               run("circulation", command, args, label, timeoutMs)
             }
             onDismiss={() => dismiss("circulation")}
+          />
+        )}
+        {selected === "interchanger" && (
+          <InterchangerServiceActions
+            data={interchanger.data as InterchangerData | null}
+            action={actions["interchanger"] ?? null}
+            disabled={!provisioned}
+            onRun={(command, args, label, timeoutMs) =>
+              run("interchanger", command, args, label, timeoutMs)
+            }
+            onDismiss={() => dismiss("interchanger")}
           />
         )}
       </ModuleWorkspace>

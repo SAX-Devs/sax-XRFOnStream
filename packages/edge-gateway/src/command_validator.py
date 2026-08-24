@@ -69,7 +69,17 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
     # Reconciled with the real interchanger_action catalog (operator subset).
     # The equipment declares python_data_type per task: cam_interchange {str},
     # usage_axial/usage_rot {bool,int} — see ARGUMENT_ENUMS/REQUIRED_ARGS.
-    "interchanger": ["cam_interchange", "usage_axial", "usage_rot"],
+    # Operator: cam_interchange, usage_axial, usage_rot. Service adds the raw
+    # (no-sensor-check) movers and the relay test.
+    "interchanger": [
+        "cam_interchange",
+        "usage_axial",
+        "usage_rot",
+        "service_axial",
+        "service_rot",
+        "service_change_position",
+        "rele_test",
+    ],
     "detector": ["set_detector", "set_gain", "set_threshold"],
     "temp_control": ["set_target_temperature", "valve_control"],
     "auxiliary": ["battery_test"],
@@ -172,6 +182,10 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
         "arg2": ("true", "false"),
     },
     "led_status": {"arg1": ("true", "false")},
+    # Interchanger raw service movers (no sensor verification).
+    "service_axial": {"arg1": ("true", "false")},
+    "service_rot": {"arg1": ("true", "false")},
+    "service_change_position": {"arg1": ("0", "1", "2", "3")},
     # power(on_state: bool) — the generator's 24V supply relay.
     "power": {"arg1": ("true", "false")},
     # set_filament_ramp_time(enable: 0/1, ramp_time_ms).
@@ -222,6 +236,9 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "set_pump_state": ("arg1",),
     "set_valve_state": ("arg1", "arg2"),
     "led_status": ("arg1",),
+    "service_axial": ("arg1",),
+    "service_rot": ("arg1",),
+    "service_change_position": ("arg1",),
 }
 
 # Tasks whose declared python_data_type is {None}: the equipment's transformer
@@ -230,6 +247,7 @@ NO_ARG_COMMANDS: dict[str, tuple[str, ...]] = {
     "circulation": ("empty_tank", "emergency_stop"),
     "vacuum": ("emergency_purge",),
     "generator": ("standby", "reset_faults"),
+    "interchanger": ("rele_test",),
 }
 
 RATE_LIMITS: dict[tuple[str, str], float] = {
@@ -254,6 +272,10 @@ RATE_LIMITS: dict[tuple[str, str], float] = {
     ("interchanger", "cam_interchange"): 10.0,
     ("interchanger", "usage_axial"): 5.0,
     ("interchanger", "usage_rot"): 5.0,
+    ("interchanger", "service_axial"): 5.0,
+    ("interchanger", "service_rot"): 5.0,
+    ("interchanger", "service_change_position"): 10.0,
+    ("interchanger", "rele_test"): 5.0,
     # Mode changes actuate five valves + the pump; the tank actions run for
     # minutes, so re-firing them quickly is always a mistake.
     ("circulation", "set_pump_state"): 3.0,
