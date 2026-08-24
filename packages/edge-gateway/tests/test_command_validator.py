@@ -770,6 +770,88 @@ def test_pump_switch_missing_second_arg_rejected(validator):
     assert "Missing required argument" in result.reason
 
 
+def test_circulation_set_pump_state_valid(validator):
+    for i, d in enumerate(("FORWARD", "REVERSE", "STOP")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-pumpstate-{i}",
+            module="circulation",
+            command="set_pump_state",
+            args={"arg1": d},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{d}: {result.reason}"
+        validator._last_command_times.clear()
+
+
+def test_circulation_set_valve_state_valid(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-cvalve",
+        module="circulation",
+        command="set_valve_state",
+        args={"arg1": "BRINE_IN_VALVE", "arg2": "true"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_circulation_set_valve_state_unknown_valve_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-cvalve-bad",
+        module="circulation",
+        command="set_valve_state",
+        args={"arg1": "INLET_VALVE", "arg2": "true"},  # a vacuum valve
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_circulation_set_valve_state_missing_state_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-cvalve-noarg",
+        module="circulation",
+        command="set_valve_state",
+        args={"arg1": "OUT_VALVE"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "Missing required argument" in result.reason
+
+
+def test_circulation_emergency_stop_takes_no_args(validator):
+    ok = _make_valid_command(
+        command_id="cmd-estop",
+        module="circulation",
+        command="emergency_stop",
+        args={},
+    )
+    assert validator.validate(ok).ok is True
+    validator._last_command_times.clear()
+
+    with_args = _make_valid_command(
+        command_id="cmd-estop-args",
+        module="circulation",
+        command="emergency_stop",
+        args={"arg1": "true"},
+    )
+    result = validator.validate(with_args)
+    assert result.ok is False
+    assert "takes no arguments" in result.reason
+
+
+def test_circulation_led_and_power_valid(validator):
+    for i, cmd_name in enumerate(("led_status", "power")):
+        cmd = _make_valid_command(
+            command_id=f"cmd-cled-{i}",
+            module="circulation",
+            command=cmd_name,
+            args={"arg1": "true"},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{cmd_name}: {result.reason}"
+        validator._last_command_times.clear()
+
+
 def test_sentinel_ok_allows_command(validator, mock_db_reader):
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},

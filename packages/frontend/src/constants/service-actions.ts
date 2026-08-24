@@ -65,6 +65,35 @@ export const SERVICE_ACTIONS: Record<
     // range is only reachable through set_voltage_and_current, which clamps
     // power on the equipment).
   },
+  circulation: {
+    // set_pump_state(rotation_direction: str) — FORWARD | REVERSE | STOP.
+    set_pump_state: {
+      args: [{ kind: "enum", values: ["FORWARD", "REVERSE", "STOP"] }],
+    },
+    // set_valve_state(valve_name: str, state: bool) — the six real valves.
+    set_valve_state: {
+      args: [
+        {
+          kind: "enum",
+          values: [
+            "BRINE_IN_VALVE",
+            "WATER_IN_VALVE",
+            "OUT_VALVE",
+            "RECIRCULATION_IN_VALVE",
+            "RECIRCULATION_OUT_VALVE",
+            "BYPASS_VALVE",
+          ],
+        },
+        { kind: "enum", values: ["true", "false"] },
+      ],
+    },
+    // led_status(status: bool) — the pickup LED.
+    led_status: { args: [{ kind: "enum", values: ["true", "false"] }] },
+    // emergency_stop() — {None}.
+    emergency_stop: { args: [] },
+    // power(OnOff: bool) — module 24V supply.
+    power: { args: [{ kind: "enum", values: ["true", "false"] }] },
+  },
   vacuum: {
     // open_valve / close_valve(valve_name: str) — the three real valves.
     open_valve: {

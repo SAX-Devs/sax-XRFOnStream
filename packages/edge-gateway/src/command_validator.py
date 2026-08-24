@@ -52,11 +52,19 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
     # set_valve_state, set_operation_mode, tank_percentage_fill, empty_tank…
     # "cancel" is not a task: the CommandDaemon intercepts it and signals the
     # cancel_event of the task named in arg1 (see ARGUMENT_ENUMS).
+    # Operator: set_operation_mode, tank_percentage_fill, empty_tank, cancel.
+    # Service adds direct pump/valve/led/power control. Role separation is in
+    # the cloud Route Handler; the whitelist is the union.
     "circulation": [
         "set_operation_mode",
         "tank_percentage_fill",
         "empty_tank",
         "cancel",
+        "set_pump_state",
+        "set_valve_state",
+        "led_status",
+        "emergency_stop",
+        "power",
     ],
     # Reconciled with the real interchanger_action catalog (operator subset).
     # The equipment declares python_data_type per task: cam_interchange {str},
@@ -150,6 +158,20 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
     "close_valve": {"arg1": ("INLET_VALVE", "OUTLET_VALVE", "PURGE_VALVE")},
     # pump_switch(pump_1: bool, pump_2: bool).
     "pump_switch": {"arg1": ("true", "false"), "arg2": ("true", "false")},
+    # Circulation direct control.
+    "set_pump_state": {"arg1": ("FORWARD", "REVERSE", "STOP")},
+    "set_valve_state": {
+        "arg1": (
+            "BRINE_IN_VALVE",
+            "WATER_IN_VALVE",
+            "OUT_VALVE",
+            "RECIRCULATION_IN_VALVE",
+            "RECIRCULATION_OUT_VALVE",
+            "BYPASS_VALVE",
+        ),
+        "arg2": ("true", "false"),
+    },
+    "led_status": {"arg1": ("true", "false")},
     # power(on_state: bool) — the generator's 24V supply relay.
     "power": {"arg1": ("true", "false")},
     # set_filament_ramp_time(enable: 0/1, ramp_time_ms).
@@ -197,12 +219,15 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "open_valve": ("arg1",),
     "close_valve": ("arg1",),
     "pump_switch": ("arg1", "arg2"),
+    "set_pump_state": ("arg1",),
+    "set_valve_state": ("arg1", "arg2"),
+    "led_status": ("arg1",),
 }
 
 # Tasks whose declared python_data_type is {None}: the equipment's transformer
 # raises on ANY argument, so reject commands that carry one.
 NO_ARG_COMMANDS: dict[str, tuple[str, ...]] = {
-    "circulation": ("empty_tank",),
+    "circulation": ("empty_tank", "emergency_stop"),
     "vacuum": ("emergency_purge",),
     "generator": ("standby", "reset_faults"),
 }
@@ -231,6 +256,11 @@ RATE_LIMITS: dict[tuple[str, str], float] = {
     ("interchanger", "usage_rot"): 5.0,
     # Mode changes actuate five valves + the pump; the tank actions run for
     # minutes, so re-firing them quickly is always a mistake.
+    ("circulation", "set_pump_state"): 3.0,
+    ("circulation", "set_valve_state"): 2.0,
+    ("circulation", "led_status"): 2.0,
+    ("circulation", "emergency_stop"): 5.0,
+    ("circulation", "power"): 10.0,
     ("circulation", "set_operation_mode"): 5.0,
     ("circulation", "tank_percentage_fill"): 15.0,
     ("circulation", "empty_tank"): 15.0,

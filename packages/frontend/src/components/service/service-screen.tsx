@@ -8,11 +8,18 @@ import { ModuleActivity } from "./module-activity";
 import { moduleFacts, SERVICE_MODULES, type ModuleFacts } from "./service-modules";
 import { GeneratorServiceActions } from "./generator-actions";
 import { VacuumServiceActions } from "./vacuum-actions";
+import { CirculationServiceActions } from "./circulation-actions";
 import { useTelemetry } from "@/hooks/use-telemetry";
 import { useEquipmentState } from "@/hooks/use-equipment-state";
 import { useActionRunner } from "@/hooks/use-action-runner";
 import type { StatusLevel } from "@/components/scada/status-panel";
-import type { GeneratorData, InterchangerData, VacuumData, ModuleName } from "@/types/telemetry";
+import type {
+  GeneratorData,
+  InterchangerData,
+  VacuumData,
+  CirculationData,
+  ModuleName,
+} from "@/types/telemetry";
 
 /**
  * Service screen — the technician's workspace. Deliberately NOT a variation
@@ -146,6 +153,17 @@ export function ServiceScreen({
               run("vacuum", command, args, label, timeoutMs)
             }
             onDismiss={() => dismiss("vacuum")}
+          />
+        )}
+        {selected === "circulation" && (
+          <CirculationServiceActions
+            data={circulation.data as CirculationData | null}
+            action={actions["circulation"] ?? null}
+            disabled={!provisioned}
+            onRun={(command, args, label, timeoutMs) =>
+              run("circulation", command, args, label, timeoutMs)
+            }
+            onDismiss={() => dismiss("circulation")}
           />
         )}
       </ModuleWorkspace>
