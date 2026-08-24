@@ -36,7 +36,16 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
     # previous pump_control/valve_control were planned-era names; the real
     # tasks are open_valve, close_valve, pump_switch, emergency_purge,
     # get_vaccum_pressure, rele_test, status, set_atmospheric_condition.
-    "vacuum": ["set_atmospheric_condition", "emergency_purge"],
+    # Operator: set_atmospheric_condition, emergency_purge. Service adds
+    # individual valve/pump control. Role separation is enforced in the cloud
+    # Route Handler; the whitelist is the union of anything the cloud may send.
+    "vacuum": [
+        "set_atmospheric_condition",
+        "emergency_purge",
+        "open_valve",
+        "close_valve",
+        "pump_switch",
+    ],
     # Reconciled with the real circulation_action catalog (operator subset).
     # The previous entries (pump_control/valve_control) were planned-era names
     # that don't exist on the equipment — the real tasks are set_pump_state,
@@ -136,6 +145,11 @@ ARGUMENT_ENUMS: dict[str, dict[str, tuple[str, ...]]] = {
     "set_hv_state": {"arg1": ("0", "1")},
     # The service variant SKIPS that interlock check (maintenance bypass).
     "set_hv_state_service": {"arg1": ("0", "1")},
+    # Vacuum individual valve control — the three real valves.
+    "open_valve": {"arg1": ("INLET_VALVE", "OUTLET_VALVE", "PURGE_VALVE")},
+    "close_valve": {"arg1": ("INLET_VALVE", "OUTLET_VALVE", "PURGE_VALVE")},
+    # pump_switch(pump_1: bool, pump_2: bool).
+    "pump_switch": {"arg1": ("true", "false"), "arg2": ("true", "false")},
     # power(on_state: bool) — the generator's 24V supply relay.
     "power": {"arg1": ("true", "false")},
     # set_filament_ramp_time(enable: 0/1, ramp_time_ms).
@@ -180,6 +194,9 @@ REQUIRED_ARGS: dict[str, tuple[str, ...]] = {
     "set_filament_current_limit": ("arg1",),
     "set_filament_preheat": ("arg1",),
     "set_filament_ramp_time": ("arg1", "arg2"),
+    "open_valve": ("arg1",),
+    "close_valve": ("arg1",),
+    "pump_switch": ("arg1", "arg2"),
 }
 
 # Tasks whose declared python_data_type is {None}: the equipment's transformer
@@ -206,6 +223,9 @@ RATE_LIMITS: dict[tuple[str, str], float] = {
     # always a mistake. The emergency purge runs a ~15s valve sequence.
     ("vacuum", "set_atmospheric_condition"): 10.0,
     ("vacuum", "emergency_purge"): 20.0,
+    ("vacuum", "open_valve"): 2.0,
+    ("vacuum", "close_valve"): 2.0,
+    ("vacuum", "pump_switch"): 5.0,
     ("interchanger", "cam_interchange"): 10.0,
     ("interchanger", "usage_axial"): 5.0,
     ("interchanger", "usage_rot"): 5.0,

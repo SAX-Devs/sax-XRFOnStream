@@ -65,6 +65,22 @@ export const SERVICE_ACTIONS: Record<
     // range is only reachable through set_voltage_and_current, which clamps
     // power on the equipment).
   },
+  vacuum: {
+    // open_valve / close_valve(valve_name: str) — the three real valves.
+    open_valve: {
+      args: [{ kind: "enum", values: ["INLET_VALVE", "OUTLET_VALVE", "PURGE_VALVE"] }],
+    },
+    close_valve: {
+      args: [{ kind: "enum", values: ["INLET_VALVE", "OUTLET_VALVE", "PURGE_VALVE"] }],
+    },
+    // pump_switch(pump_1: bool, pump_2: bool) — both pumps in one call.
+    pump_switch: {
+      args: [
+        { kind: "enum", values: ["true", "false"] },
+        { kind: "enum", values: ["true", "false"] },
+      ],
+    },
+  },
 };
 
 // Re-exported so the service UI shows the same numbers the server enforces.

@@ -7,11 +7,12 @@ import { RawTelemetry } from "./raw-telemetry";
 import { ModuleActivity } from "./module-activity";
 import { moduleFacts, SERVICE_MODULES, type ModuleFacts } from "./service-modules";
 import { GeneratorServiceActions } from "./generator-actions";
+import { VacuumServiceActions } from "./vacuum-actions";
 import { useTelemetry } from "@/hooks/use-telemetry";
 import { useEquipmentState } from "@/hooks/use-equipment-state";
 import { useActionRunner } from "@/hooks/use-action-runner";
 import type { StatusLevel } from "@/components/scada/status-panel";
-import type { GeneratorData, InterchangerData, ModuleName } from "@/types/telemetry";
+import type { GeneratorData, InterchangerData, VacuumData, ModuleName } from "@/types/telemetry";
 
 /**
  * Service screen — the technician's workspace. Deliberately NOT a variation
@@ -124,7 +125,7 @@ export function ServiceScreen({
         facts={facts[selected]}
         hasData={hasData[selected]}
       >
-        {selected === "generator" ? (
+        {selected === "generator" && (
           <GeneratorServiceActions
             data={generator.data as GeneratorData | null}
             interlocks={interchanger.data as InterchangerData | null}
@@ -135,7 +136,18 @@ export function ServiceScreen({
             }
             onDismiss={() => dismiss("generator")}
           />
-        ) : null}
+        )}
+        {selected === "vacuum" && (
+          <VacuumServiceActions
+            data={vacuum.data as VacuumData | null}
+            action={actions["vacuum"] ?? null}
+            disabled={!provisioned}
+            onRun={(command, args, label, timeoutMs) =>
+              run("vacuum", command, args, label, timeoutMs)
+            }
+            onDismiss={() => dismiss("vacuum")}
+          />
+        )}
       </ModuleWorkspace>
 
       {/* Right — evidence: raw telemetry + module activity */}

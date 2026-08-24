@@ -716,6 +716,60 @@ def test_filament_ramp_time_valid_and_bounded(validator):
     assert "out of range" in result.reason.lower()
 
 
+def test_vacuum_open_close_valve_valid(validator):
+    for i, (cmd_name, valve) in enumerate(
+        [
+            ("open_valve", "INLET_VALVE"),
+            ("close_valve", "OUTLET_VALVE"),
+            ("open_valve", "PURGE_VALVE"),
+        ]
+    ):
+        cmd = _make_valid_command(
+            command_id=f"cmd-valve-{i}",
+            module="vacuum",
+            command=cmd_name,
+            args={"arg1": valve},
+        )
+        result = validator.validate(cmd)
+        assert result.ok is True, f"{cmd_name}({valve}): {result.reason}"
+        validator._last_command_times.clear()
+
+
+def test_vacuum_valve_unknown_name_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-valve-bad",
+        module="vacuum",
+        command="open_valve",
+        args={"arg1": "BRINE_IN_VALVE"},  # a circulation valve, not vacuum's
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "not allowed" in result.reason
+
+
+def test_pump_switch_valid(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-pump",
+        module="vacuum",
+        command="pump_switch",
+        args={"arg1": "true", "arg2": "false"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is True, result.reason
+
+
+def test_pump_switch_missing_second_arg_rejected(validator):
+    cmd = _make_valid_command(
+        command_id="cmd-pump-noarg",
+        module="vacuum",
+        command="pump_switch",
+        args={"arg1": "true"},
+    )
+    result = validator.validate(cmd)
+    assert result.ok is False
+    assert "Missing required argument" in result.reason
+
+
 def test_sentinel_ok_allows_command(validator, mock_db_reader):
     mock_db_reader.read_table.return_value = [
         {"name": "critical_flow", "severity": "OK", "message": None},
