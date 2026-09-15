@@ -39,11 +39,9 @@ export function DeviceCard({ device }: DeviceCardProps) {
       <div className="mt-4 flex items-center gap-3">
         <DeviceStatusBadge state={equipmentState} />
 
-        {device.last_seen_at && (
+        {!online && device.last_seen_at && (
           <span className="text-xs text-gray-600">
-            {online
-              ? "Conectado"
-              : `Visto ${formatTimeAgo(device.last_seen_at)}`}
+            Visto {formatTimeAgo(device.last_seen_at)}
           </span>
         )}
       </div>
