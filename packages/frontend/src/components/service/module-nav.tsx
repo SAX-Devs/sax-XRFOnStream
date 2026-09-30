@@ -22,6 +22,9 @@ interface ModuleNavProps {
     database: StatusLevel;
     equipment: StatusLevel;
     equipmentLabel: string;
+    alarms: StatusLevel;
+    alarmsLabel: string;
+    alarmsTitle: string;
   };
 }
 
@@ -83,6 +86,9 @@ export function ModuleNav({
         database={health.database}
         equipment={health.equipment}
         equipmentLabel={health.equipmentLabel}
+        alarms={health.alarms}
+        alarmsLabel={health.alarmsLabel}
+        alarmsTitle={health.alarmsTitle}
       />
     </div>
   );

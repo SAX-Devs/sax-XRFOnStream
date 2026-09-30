@@ -21,6 +21,10 @@ import type {
   CirculationData,
   ModuleName,
 } from "@/types/telemetry";
+import {
+  alertsHealth,
+  equipmentAlerts,
+} from "@/types/equipment-state";
 
 /**
  * Service screen — the technician's workspace. Deliberately NOT a variation
@@ -108,6 +112,7 @@ export function ServiceScreen({
     : "ok";
   const equipment =
     EQUIPMENT_ROW[equip.state ?? "unknown"] ?? EQUIPMENT_ROW.unknown;
+  const alarms = alertsHealth(equipmentAlerts(equip.detail));
 
   const current = SERVICE_MODULES.find((m) => m.key === selected)!;
 
@@ -124,6 +129,9 @@ export function ServiceScreen({
           database,
           equipment: equipment.status,
           equipmentLabel: equipment.label,
+          alarms: alarms.level,
+          alarmsLabel: alarms.label,
+          alarmsTitle: alarms.title,
         }}
       />
 

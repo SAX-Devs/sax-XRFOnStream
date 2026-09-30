@@ -5,6 +5,10 @@ import { useEquipmentState } from "./use-equipment-state";
 import type { ScadaDiagramState } from "@/components/scada/process-diagram";
 import type { ScadaParams } from "@/components/scada/params-panel";
 import type { EquipmentStateEnum } from "@/types/database";
+import {
+  equipmentAlerts,
+  type EquipmentAlert,
+} from "@/types/equipment-state";
 
 interface ScadaTelemetry {
   diagram: ScadaDiagramState;
@@ -13,6 +17,8 @@ interface ScadaTelemetry {
     loading: boolean;
     lastUpdated: Date | null;
     equipmentState: EquipmentStateEnum | null;
+    /** Active Sentinel validations (non-OK), independent of equipmentState. */
+    alerts: EquipmentAlert[];
     /** False when any telemetry poll failed (dashboard ↔ Supabase problem). */
     dbOk: boolean;
   };
@@ -149,6 +155,7 @@ export function useScadaTelemetry(deviceId: string): ScadaTelemetry {
       loading: !hasAnyData,
       lastUpdated,
       equipmentState: equip.state,
+      alerts: equipmentAlerts(equip.detail),
       dbOk,
     },
   };

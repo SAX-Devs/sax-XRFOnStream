@@ -9,6 +9,7 @@ import { StatusPanel, type StatusLevel } from "./status-panel";
 import { SpectrumButton } from "./control-bar";
 import { useScadaTelemetry } from "@/hooks/use-scada-telemetry";
 import { useScadaEvents } from "@/hooks/use-scada-events";
+import { alertsHealth } from "@/types/equipment-state";
 
 interface ScadaScreenProps {
   deviceId: string;
@@ -16,7 +17,11 @@ interface ScadaScreenProps {
   userRole?: string;
 }
 
-/** Equipment operational state → system-panel row (status colour + label). */
+/**
+ * Equipment operational state → system-panel row (status colour + label).
+ * "error" only means "idle with an active alarm": while the equipment measures,
+ * the state stays "measuring" and the alarm shows in its own "Alarmas" row.
+ */
 const EQUIPMENT_ROW: Record<string, { status: StatusLevel; label: string }> = {
   measuring: { status: "ok", label: "Midiendo" },
   standby: { status: "ok", label: "Standby" },
@@ -35,7 +40,13 @@ export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps)
   const { diagram, params, meta } = useScadaTelemetry(deviceId);
 
   // Live event log: every discrete transition observed while the page is open.
-  const events = useScadaEvents(diagram, params, meta.equipmentState, meta.loading);
+  const events = useScadaEvents(
+    diagram,
+    params,
+    meta.equipmentState,
+    meta.alerts,
+    meta.loading
+  );
 
   // Re-render every 15s so the data-freshness indicator ages truthfully even
   // when no new data arrives.
@@ -67,6 +78,9 @@ export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps)
   const equipment =
     EQUIPMENT_ROW[meta.equipmentState ?? "unknown"] ?? EQUIPMENT_ROW.unknown;
 
+  // "Alarmas" = active Sentinel validations, shown even while measuring.
+  const alarms = alertsHealth(meta.alerts);
+
   return (
     <div className="space-y-3">
       <DiagramHeader userLabel={userLabel} userRole={userRole} />
@@ -80,6 +94,9 @@ export function ScadaScreen({ deviceId, userLabel, userRole }: ScadaScreenProps)
             database={database}
             equipment={equipment.status}
             equipmentLabel={equipment.label}
+            alarms={alarms.level}
+            alarmsLabel={alarms.label}
+            alarmsTitle={alarms.title}
           />
           <MessagesPanel messages={events} />
         </div>

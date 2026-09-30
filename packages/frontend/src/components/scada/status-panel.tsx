@@ -6,9 +6,11 @@ interface StatusRowProps {
   label: string;
   status: StatusLevel;
   value?: string;
+  /** Native tooltip with the row's detail (e.g. the active validations). */
+  title?: string;
 }
 
-function StatusRow({ label, status, value }: StatusRowProps) {
+function StatusRow({ label, status, value, title }: StatusRowProps) {
   const dotClass = {
     ok: "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.7)]",
     warning: "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]",
@@ -25,7 +27,10 @@ function StatusRow({ label, status, value }: StatusRowProps) {
     value ?? { ok: "OK", warning: "WARN", error: "ERROR" }[status];
 
   return (
-    <div className="flex items-center justify-between border-b border-white/5 px-3 py-2 last:border-b-0">
+    <div
+      className="flex items-center justify-between border-b border-white/5 px-3 py-2 last:border-b-0"
+      title={title || undefined}
+    >
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
           <span
@@ -47,8 +52,13 @@ function StatusRow({ label, status, value }: StatusRowProps) {
 interface StatusPanelProps {
   internet?: StatusLevel;
   database?: StatusLevel;
+  /** What the equipment is doing (measuring, idle...). Never carries alarms. */
   equipment?: StatusLevel;
   equipmentLabel?: string;
+  /** Active Sentinel validations — the second axis, shown next to the activity. */
+  alarms?: StatusLevel;
+  alarmsLabel?: string;
+  alarmsTitle?: string;
 }
 
 export function StatusPanel({
@@ -56,6 +66,9 @@ export function StatusPanel({
   database = "ok",
   equipment = "ok",
   equipmentLabel = "Midiendo",
+  alarms = "ok",
+  alarmsLabel = "OK",
+  alarmsTitle,
 }: StatusPanelProps) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md">
@@ -68,6 +81,12 @@ export function StatusPanel({
         <StatusRow label="Internet" status={internet} />
         <StatusRow label="DB" status={database} />
         <StatusRow label="Equipo" status={equipment} value={equipmentLabel} />
+        <StatusRow
+          label="Alarmas"
+          status={alarms}
+          value={alarmsLabel}
+          title={alarmsTitle}
+        />
       </div>
     </div>
   );

@@ -3,6 +3,10 @@ import { ROUTES } from "@/constants/routes";
 import { isDeviceOnline } from "@/types/devices";
 import { DeviceStatusBadge } from "./device-status-badge";
 import type { DeviceWithState } from "@/types/devices";
+import {
+  alertsHealth,
+  equipmentAlerts,
+} from "@/types/equipment-state";
 
 interface DeviceCardProps {
   device: DeviceWithState;
@@ -12,6 +16,12 @@ export function DeviceCard({ device }: DeviceCardProps) {
   const online = isDeviceOnline(device.last_seen_at);
   const equipmentState =
     device.device_equipment_state?.state ?? "unknown";
+  // Alarms are a separate axis from the state: a measuring equipment with a
+  // tripped validation shows "Midiendo" plus this chip. Only alarm-level
+  // severities make the grid; warnings stay in the device's own screens.
+  const alarms = alertsHealth(
+    equipmentAlerts(device.device_equipment_state?.detail)
+  );
 
   return (
     <Link
@@ -38,6 +48,16 @@ export function DeviceCard({ device }: DeviceCardProps) {
 
       <div className="mt-4 flex items-center gap-3">
         <DeviceStatusBadge state={equipmentState} />
+
+        {alarms.alarms > 0 && (
+          <span
+            title={alarms.title}
+            className="inline-flex items-center gap-1.5 rounded-full border border-red-500/25 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-300"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.5)]" />
+            {alarms.alarms === 1 ? "1 alarma" : `${alarms.alarms} alarmas`}
+          </span>
+        )}
 
         {!online && device.last_seen_at && (
           <span className="text-xs text-gray-600">

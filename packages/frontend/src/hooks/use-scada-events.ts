@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import type { ScadaDiagramState } from "@/components/scada/process-diagram";
 import type { ScadaParams } from "@/components/scada/params-panel";
 import type { EquipmentStateEnum } from "@/types/database";
+import {
+  isAlarmSeverity,
+  type EquipmentAlert,
+} from "@/types/equipment-state";
 
 export interface ScadaEvent {
   id: number;
@@ -26,6 +30,8 @@ const STATE_LABEL: Record<string, string> = {
 
 interface Snapshot {
   equipState: string | null;
+  /** Active Sentinel validations: name → raw severity. */
+  alerts: Record<string, string>;
   pumpState: string;
   brineValve: boolean;
   waterValve: boolean;
@@ -66,6 +72,21 @@ function diff(prev: Snapshot, curr: Snapshot): Change[] {
             : "info",
       text: `Estado del equipo → ${STATE_LABEL[curr.equipState] ?? curr.equipState}`,
     });
+  }
+  // Sentinel validations tripping / clearing — logged on their own axis so a
+  // measurement in progress and an alarm can both appear, in order.
+  for (const [name, severity] of Object.entries(curr.alerts)) {
+    if (prev.alerts[name] !== severity) {
+      const alarm = isAlarmSeverity(severity);
+      out.push({
+        severity: alarm ? "critical" : "warning",
+        text: `Alerta ${name} → ${alarm ? "ALARMA" : "AVISO"}`,
+      });
+    }
+  }
+  for (const name of Object.keys(prev.alerts)) {
+    if (!(name in curr.alerts))
+      out.push({ severity: "info", text: `Alerta ${name} → OK` });
   }
   if (curr.pumpState !== prev.pumpState)
     out.push({ severity: "info", text: `Bomba peristáltica → ${curr.pumpState}` });
@@ -152,6 +173,7 @@ export function useScadaEvents(
   diagram: ScadaDiagramState,
   params: ScadaParams,
   equipState: EquipmentStateEnum | null,
+  alerts: EquipmentAlert[],
   loading: boolean
 ): ScadaEvent[] {
   const [events, setEvents] = useState<ScadaEvent[]>([]);
@@ -163,6 +185,7 @@ export function useScadaEvents(
 
     const snap: Snapshot = {
       equipState,
+      alerts: Object.fromEntries(alerts.map((a) => [a.name, a.severity])),
       pumpState: diagram.pumpState,
       brineValve: diagram.brineValve,
       waterValve: diagram.waterValve,
