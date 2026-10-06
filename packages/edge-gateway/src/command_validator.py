@@ -70,7 +70,10 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
     # The equipment declares python_data_type per task: cam_interchange {str},
     # usage_axial/usage_rot {bool,int} — see ARGUMENT_ENUMS/REQUIRED_ARGS.
     # Operator: cam_interchange, usage_axial, usage_rot. Service adds the raw
-    # (no-sensor-check) movers and the relay test.
+    # (no-sensor-check) movers. rele_test is deliberately NOT whitelisted:
+    # Interchanger.rele_test() waits on input() between moves, so run by the
+    # command daemon (no console) it fails after the first move and leaves the
+    # arm half-way. Re-add once SAX ships a non-interactive version.
     "interchanger": [
         "cam_interchange",
         "usage_axial",
@@ -78,7 +81,6 @@ COMMAND_WHITELIST: dict[str, list[str]] = {
         "service_axial",
         "service_rot",
         "service_change_position",
-        "rele_test",
     ],
     "detector": ["set_detector", "set_gain", "set_threshold"],
     "temp_control": ["set_target_temperature", "valve_control"],
@@ -247,7 +249,6 @@ NO_ARG_COMMANDS: dict[str, tuple[str, ...]] = {
     "circulation": ("empty_tank", "emergency_stop"),
     "vacuum": ("emergency_purge",),
     "generator": ("standby", "reset_faults"),
-    "interchanger": ("rele_test",),
 }
 
 RATE_LIMITS: dict[tuple[str, str], float] = {
@@ -275,7 +276,6 @@ RATE_LIMITS: dict[tuple[str, str], float] = {
     ("interchanger", "service_axial"): 5.0,
     ("interchanger", "service_rot"): 5.0,
     ("interchanger", "service_change_position"): 10.0,
-    ("interchanger", "rele_test"): 5.0,
     # Mode changes actuate five valves + the pump; the tank actions run for
     # minutes, so re-firing them quickly is always a mistake.
     ("circulation", "set_pump_state"): 3.0,

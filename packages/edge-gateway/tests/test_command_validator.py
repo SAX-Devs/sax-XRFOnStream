@@ -887,25 +887,18 @@ def test_service_change_position_valid_and_bounded(validator):
     assert "not allowed" in result.reason
 
 
-def test_interchanger_rele_test_takes_no_args(validator):
-    ok = _make_valid_command(
+def test_interchanger_rele_test_is_not_allowed(validator):
+    """Interchanger.rele_test() blocks on input() between moves; from the
+    daemon it would leave the arm half-way, so the gateway refuses it."""
+    cmd = _make_valid_command(
         command_id="cmd-relei",
         module="interchanger",
         command="rele_test",
         args={},
     )
-    assert validator.validate(ok).ok is True
-    validator._last_command_times.clear()
-
-    with_args = _make_valid_command(
-        command_id="cmd-relei-args",
-        module="interchanger",
-        command="rele_test",
-        args={"arg1": "1"},
-    )
-    result = validator.validate(with_args)
+    result = validator.validate(cmd)
     assert result.ok is False
-    assert "takes no arguments" in result.reason
+    assert "not in whitelist" in result.reason
 
 
 def test_sentinel_ok_allows_command(validator, mock_db_reader):

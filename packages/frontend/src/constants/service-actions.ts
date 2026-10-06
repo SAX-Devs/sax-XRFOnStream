@@ -103,8 +103,8 @@ export const SERVICE_ACTIONS: Record<
     service_change_position: {
       args: [{ kind: "enum", values: ["0", "1", "2", "3"] }],
     },
-    // rele_test() — {None}.
-    rele_test: { args: [] },
+    // rele_test() is NOT offered: on the equipment it waits on input() between
+    // moves, so run remotely it leaves the arm half-way (2026-10-06).
   },
   vacuum: {
     // open_valve / close_valve(valve_name: str) — the three real valves.

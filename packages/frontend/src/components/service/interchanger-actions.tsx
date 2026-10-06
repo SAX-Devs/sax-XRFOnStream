@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRow, SubmitButton, type FirePayload, type RiskTier } from "./action-row";
+import { ActionRow, type FirePayload, type RiskTier } from "./action-row";
 import type { InterchangerData } from "@/types/telemetry";
 import type { InflightAction } from "@/hooks/use-action-runner";
 import { TERMINAL_STAGES } from "@/hooks/use-action-runner";
@@ -14,7 +14,8 @@ import { TERMINAL_STAGES } from "@/hooks/use-action-runner";
  *   service_axial(target: bool)  — axial piston UP/DOWN, NO sensor check.
  *   service_rot(target: bool)    — rotational piston UP/DOWN, NO sensor check.
  *   service_change_position(0-3) — the four axial/rot combinations directly.
- *   rele_test()                  — {None}, relay cycle test.
+ *   rele_test() is deliberately NOT offered: on the equipment it waits on
+ *   input() between moves, so run remotely it leaves the arm half-way.
  *
  * The service_* movers skip the sensor verification the operator usage_* have,
  * so they can drive a piston into a position the sensors don't confirm — hence
@@ -25,7 +26,6 @@ const TIMEOUTS: Record<string, number> = {
   service_axial: 20_000,
   service_rot: 40_000,
   service_change_position: 60_000,
-  rele_test: 30_000,
 };
 
 // service_change_position mapping (from the equipment docstring):
@@ -154,21 +154,6 @@ export function InterchangerServiceActions({
               </div>
             );
           }}
-        </ActionRow>
-      </Group>
-
-      <Group title="Diagnóstico">
-        <ActionRow
-          {...rowProps("rele_test", "Prueba de relés", "normal")}
-          description="Ciclo de prueba de los relés del módulo"
-        >
-          {({ request, blocked }) => (
-            <SubmitButton
-              label="Ejecutar prueba de relés"
-              disabled={blocked}
-              onClick={() => request({ args: {}, label: "Prueba de relés" })}
-            />
-          )}
         </ActionRow>
       </Group>
     </div>
