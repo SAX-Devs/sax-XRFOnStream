@@ -1,0 +1,14 @@
+{
+  "name": "@sax/xrf-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dominio compartido del equipo XRF: tipos, catálogos de acciones y acceso a datos. TypeScript puro, sin React, sin Next, sin Supabase en la interfaz pública.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

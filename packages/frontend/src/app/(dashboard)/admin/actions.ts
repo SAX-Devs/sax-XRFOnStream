@@ -13,7 +13,7 @@ import {
 import { getDevice } from "@/services/devices";
 import { inviteUser } from "@/services/users";
 import { ROUTES } from "@/constants/routes";
-import type { UserRole } from "@/types/auth";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 interface ActionResult {
   success: boolean;

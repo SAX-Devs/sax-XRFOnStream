@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { PUBLIC_ROUTES, ROUTES } from "@/constants/routes";
-import { ADMIN_ROLES } from "@/constants/roles";
-import type { UserRole } from "@/types/auth";
+import { ADMIN_ROLES } from "@sax/xrf-core/catalogs/roles";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { signCommand } from "@/lib/hmac/sign";
 import { publishToMqtt } from "@/lib/emqx/publish";
-import { hasMinimumRole } from "@/constants/roles";
-import { buildOperatorArgs } from "@/constants/operator-actions";
-import { buildServiceArgs } from "@/constants/service-actions";
-import type { UserRole } from "@/types/auth";
+import { hasMinimumRole } from "@sax/xrf-core/catalogs/roles";
+import { buildOperatorArgs } from "@sax/xrf-core/catalogs/operator-actions";
+import { buildServiceArgs } from "@sax/xrf-core/catalogs/service-actions";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 interface CommandBody {
   module: string;

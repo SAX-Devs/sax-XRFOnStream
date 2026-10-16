@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ActionCard, type ActionOption, type StateTone } from "./action-card";
-import type { CirculationData } from "@/types/telemetry";
+import type { CirculationData } from "@sax/xrf-core/types/telemetry";
 import type { InflightAction } from "@/hooks/use-action-runner";
 import { TERMINAL_STAGES } from "@/hooks/use-action-runner";
 

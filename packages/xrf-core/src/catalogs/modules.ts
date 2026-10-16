@@ -1,4 +1,4 @@
-import type { ModuleName } from "@/types/telemetry";
+import type { ModuleName } from "../types/telemetry";
 
 interface ModuleInfo {
   key: ModuleName;

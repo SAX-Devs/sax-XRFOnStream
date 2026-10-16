@@ -6,8 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ROUTES } from "@/constants/routes";
-import { ROLE_LABELS } from "@/constants/roles";
-import type { UserRole } from "@/types/auth";
+import { ROLE_LABELS } from "@sax/xrf-core/catalogs/roles";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 interface NavItem {
   href: string;

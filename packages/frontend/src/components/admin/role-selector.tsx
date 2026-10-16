@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { INVITE_ROLES, ROLE_LABELS } from "@/constants/roles";
-import type { UserRole } from "@/types/auth";
+import { INVITE_ROLES, ROLE_LABELS } from "@sax/xrf-core/catalogs/roles";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 const ROLE_INFO: Record<string, { description: string; color: string }> = {
   viewer: {

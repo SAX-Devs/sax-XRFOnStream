@@ -7,7 +7,7 @@ import type {
   DetectorData,
   TempControlData,
   AuxiliaryData,
-} from "@/types/telemetry";
+} from "@sax/xrf-core/types/telemetry";
 
 /**
  * Per-module presentation config for the Service screen: what the module

@@ -20,7 +20,7 @@ import type {
   VacuumData,
   CirculationData,
   ModuleName,
-} from "@/types/telemetry";
+} from "@sax/xrf-core/types/telemetry";
 import {
   alertsHealth,
   equipmentAlerts,

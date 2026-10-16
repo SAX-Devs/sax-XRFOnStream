@@ -1,7 +1,7 @@
 "use client";
 
 import { StatusPanel, type StatusLevel } from "@/components/scada/status-panel";
-import type { ModuleName } from "@/types/telemetry";
+import type { ModuleName } from "@sax/xrf-core/types/telemetry";
 import { SERVICE_MODULES, type ModuleFacts } from "./service-modules";
 
 /**

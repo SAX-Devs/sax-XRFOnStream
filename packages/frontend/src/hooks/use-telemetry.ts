@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { ModuleDataMap, ModuleName } from "@/types/telemetry";
+import type { ModuleDataMap, ModuleName } from "@sax/xrf-core/types/telemetry";
 
 interface TelemetryState<T> {
   data: T | null;

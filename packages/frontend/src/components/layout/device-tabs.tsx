@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
-import { hasMinimumRole } from "@/constants/roles";
-import type { UserRole } from "@/types/auth";
+import { hasMinimumRole } from "@sax/xrf-core/catalogs/roles";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 interface Tab {
   href: string;

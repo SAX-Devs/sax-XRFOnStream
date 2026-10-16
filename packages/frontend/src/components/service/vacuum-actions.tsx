@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ActionRow, SubmitButton, type FirePayload, type RiskTier } from "./action-row";
-import type { VacuumData } from "@/types/telemetry";
+import type { VacuumData } from "@sax/xrf-core/types/telemetry";
 import type { InflightAction } from "@/hooks/use-action-runner";
 import { TERMINAL_STAGES } from "@/hooks/use-action-runner";
 

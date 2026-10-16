@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ActionCard, type ActionOption, type StateTone } from "./action-card";
-import { GENERATOR_LIMITS } from "@/constants/operator-actions";
-import type { GeneratorData, InterchangerData } from "@/types/telemetry";
+import { GENERATOR_LIMITS } from "@sax/xrf-core/catalogs/operator-actions";
+import type { GeneratorData, InterchangerData } from "@sax/xrf-core/types/telemetry";
 import type { InflightAction } from "@/hooks/use-action-runner";
 import { TERMINAL_STAGES } from "@/hooks/use-action-runner";
 

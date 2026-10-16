@@ -1,0 +1,14 @@
+{
+  "name": "sax-xrfonstream",
+  "private": true,
+  "workspaces": [
+    "packages/xrf-core",
+    "packages/xrf-ui",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "build:frontend": "npm run build -w frontend",
+    "lint:frontend": "npm run lint -w frontend",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

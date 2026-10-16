@@ -1,7 +1,7 @@
 "use client";
 
 import { ActionCard, type ActionOption, type StateTone } from "./action-card";
-import type { InterchangerData } from "@/types/telemetry";
+import type { InterchangerData } from "@sax/xrf-core/types/telemetry";
 import type { InflightAction } from "@/hooks/use-action-runner";
 import { TERMINAL_STAGES } from "@/hooks/use-action-runner";
 

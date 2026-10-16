@@ -1,20 +1,5 @@
 import type { Database } from "./database";
 
+/** Fila de command_audit en Supabase. Los tipos de dominio viven en @sax/xrf-core/types/commands. */
 export type CommandAuditRow =
   Database["public"]["Tables"]["command_audit"]["Row"];
-
-export interface CommandRequest {
-  module: string;
-  command: string;
-  args?: Record<string, string>;
-}
-
-export interface CommandResponse {
-  command_id: string;
-  status: "sent";
-}
-
-export interface CommandError {
-  error: string;
-  detail?: string;
-}

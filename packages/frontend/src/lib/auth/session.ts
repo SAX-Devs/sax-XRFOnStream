@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { hasMinimumRole } from "@/constants/roles";
+import { hasMinimumRole } from "@sax/xrf-core/catalogs/roles";
 import { ROUTES } from "@/constants/routes";
-import type { UserProfile, UserRole } from "@/types/auth";
+import type { UserProfile, UserRole } from "@sax/xrf-core/types/auth";
 
 /**
  * Returns the current user profile from the Supabase session,

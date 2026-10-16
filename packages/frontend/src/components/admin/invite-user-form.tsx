@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { inviteUserAction } from "@/app/(dashboard)/admin/actions";
-import { INVITE_ROLES } from "@/constants/roles";
+import { INVITE_ROLES } from "@sax/xrf-core/catalogs/roles";
 import { RoleSelector } from "./role-selector";
 
 interface InviteUserFormProps {

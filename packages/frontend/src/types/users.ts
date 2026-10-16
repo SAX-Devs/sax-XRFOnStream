@@ -1,4 +1,4 @@
-import type { UserRole } from "./auth";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 export interface UserListItem {
   id: string;

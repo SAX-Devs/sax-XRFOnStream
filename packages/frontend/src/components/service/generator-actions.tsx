@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ActionRow, NumField, SubmitButton, type FirePayload, type RiskTier } from "./action-row";
-import { GENERATOR_LIMITS } from "@/constants/service-actions";
-import type { GeneratorData, InterchangerData } from "@/types/telemetry";
+import { GENERATOR_LIMITS } from "@sax/xrf-core/catalogs/service-actions";
+import type { GeneratorData, InterchangerData } from "@sax/xrf-core/types/telemetry";
 import type { InflightAction } from "@/hooks/use-action-runner";
 import { TERMINAL_STAGES } from "@/hooks/use-action-runner";
 

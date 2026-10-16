@@ -1,6 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import type { UserListItem, InviteUserPayload } from "@/types/users";
-import type { UserRole } from "@/types/auth";
+import type { UserRole } from "@sax/xrf-core/types/auth";
 
 /**
  * tenant_id / role live in the protected `user_profiles` table (migration

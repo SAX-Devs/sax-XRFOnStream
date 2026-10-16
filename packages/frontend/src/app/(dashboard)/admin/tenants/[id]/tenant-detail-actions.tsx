@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ROLE_LABELS } from "@/constants/roles";
+import { ROLE_LABELS } from "@sax/xrf-core/catalogs/roles";
 import { Modal } from "@/components/ui/modal";
 import { CreateDeviceForm } from "@/components/admin/create-device-form";
 import { InviteUserForm } from "@/components/admin/invite-user-form";
