@@ -50,7 +50,7 @@ interface MessagesPanelProps {
 
 export function MessagesPanel({ messages }: MessagesPanelProps) {
   return (
-    <div className="flex flex-col rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md">
+    <div className="flex flex-col rounded-2xl border border-white/10 bg-black/60">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           Mensajes

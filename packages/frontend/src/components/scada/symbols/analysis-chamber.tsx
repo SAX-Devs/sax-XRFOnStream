@@ -1,10 +1,17 @@
-interface AnalysisChamberProps {
+interface ChamberGeometry {
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+interface AnalysisChamberProps extends ChamberGeometry {
   tag?: string;
   /** Current interchanger mode — drives the inner visualisation. */
+  interchangerMode: "NORMAL" | "RECAL";
+}
+
+interface AnalysisChamberFlowProps extends ChamberGeometry {
   interchangerMode: "NORMAL" | "RECAL";
   /** Whether the sample pump is delivering — gates the in-chamber flow animation. */
   pumping?: boolean;
@@ -24,21 +31,22 @@ interface AnalysisChamberProps {
  *
  * In RECAL mode the sample flow visualisation fades and the recalibration
  * target on the interchanger arm takes over the measurement zone.
+ *
+ * The chamber is split in three pieces because the diagram draws its moving
+ * particles in their own layer (see process-diagram.tsx): the body goes in the
+ * base layer BELOW the particles, the flow in the particle layer, and the rest
+ * (port, measurement zone, nozzles, title) in the symbols layer ABOVE them.
  */
-export function AnalysisChamber({
+
+/** Chamber walls + fluid tint — base layer, below the particles. */
+export function AnalysisChamberBody({
   x,
   y,
   width,
   height,
-  tag,
   interchangerMode,
-  pumping = true,
-}: AnalysisChamberProps) {
-  const cx = x + width / 2;
+}: Omit<AnalysisChamberProps, "tag">) {
   const normalMode = interchangerMode === "NORMAL";
-  const showFlow = normalMode && pumping;
-  const zoneX = x + width - 12;
-  const zoneY = y + height / 2;
 
   return (
     <g>
@@ -77,7 +85,60 @@ export function AnalysisChamber({
         stroke="#1e293b"
         strokeWidth="1"
       />
+    </g>
+  );
+}
 
+/** Sample particles inside the chamber — particle layer. */
+export function AnalysisChamberFlow({
+  x,
+  y,
+  width,
+  height,
+  interchangerMode,
+  pumping = true,
+}: AnalysisChamberFlowProps) {
+  const cx = x + width / 2;
+  if (interchangerMode !== "NORMAL" || !pumping) return null;
+
+  // Sample is routed past the window: enters top centre, arcs right toward the
+  // measurement zone, and returns to the bottom outlet. The quadratic curve's
+  // midpoint lands on the measurement zone (≈ x+width-12, y+height/2).
+  return (
+    <>
+      {[0, 1, 2, 3].map((i) => (
+        <g key={i}>
+          {/* Halo sin filtro SVG — ver flow-layer.tsx */}
+          <circle r="4.8" fill="#22d3ee" opacity="0.22" />
+          <circle r="2.4" fill="#22d3ee" />
+          <animateMotion
+            dur="2.6s"
+            repeatCount="indefinite"
+            begin={`-${(i * 2.6) / 4}s`}
+            path={`M ${cx} ${y + 8} Q ${cx + 110} ${y + height / 2} ${cx} ${y + height - 8}`}
+          />
+        </g>
+      ))}
+    </>
+  );
+}
+
+/** Arm port, measurement zone, nozzles, title and tag — symbols layer, above the particles. */
+export function AnalysisChamber({
+  x,
+  y,
+  width,
+  height,
+  tag,
+  interchangerMode,
+}: AnalysisChamberProps) {
+  const cx = x + width / 2;
+  const normalMode = interchangerMode === "NORMAL";
+  const zoneX = x + width - 12;
+  const zoneY = y + height / 2;
+
+  return (
+    <g>
       {/* Recalibration arm port — sealed opening on the left wall at mid-height */}
       <g>
         {/* Port flange */}
@@ -108,29 +169,6 @@ export function AnalysisChamber({
         <circle cx={x - 2} cy={y + height / 2 + 9.5} r="0.85" fill="#94a3b8" />
         <circle cx={x + 5} cy={y + height / 2 + 9.5} r="0.85" fill="#94a3b8" />
       </g>
-
-      {/* Flow particles — sample is routed past the window: enters top centre,
-          arcs right toward the measurement zone, and returns to the bottom outlet.
-          The quadratic curve's midpoint lands on the measurement zone (≈ x+width-12, y+height/2). */}
-      {showFlow && (
-        <>
-          {[0, 1, 2, 3].map((i) => (
-            <circle
-              key={i}
-              r="2.4"
-              fill="#22d3ee"
-              filter="url(#particle-glow)"
-            >
-              <animateMotion
-                dur="2.6s"
-                repeatCount="indefinite"
-                begin={`-${(i * 2.6) / 4}s`}
-                path={`M ${cx} ${y + 8} Q ${cx + 110} ${y + height / 2} ${cx} ${y + height - 8}`}
-              />
-            </circle>
-          ))}
-        </>
-      )}
 
       {/* Measurement zone — where the radiation meets the sample/target */}
       <g

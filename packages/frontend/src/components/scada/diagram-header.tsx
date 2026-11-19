@@ -22,7 +22,7 @@ export function DiagramHeader({
   const timeStr = now.toLocaleTimeString("es-CL");
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-2xl border border-white/10 bg-black/60 px-5 py-3 backdrop-blur-md">
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-2xl border border-white/10 bg-black/60 px-5 py-3">
       {/* Left: Date / Time */}
       <div className="flex min-w-0 items-center gap-2 font-mono text-sm">
         <svg

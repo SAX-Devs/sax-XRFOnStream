@@ -71,7 +71,7 @@ export function StatusPanel({
   alarmsTitle,
 }: StatusPanelProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md">
+    <div className="rounded-2xl border border-white/10 bg-black/60">
       <div className="border-b border-white/10 px-3 py-2">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           Sistema

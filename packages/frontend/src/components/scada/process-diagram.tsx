@@ -10,7 +10,11 @@ import { BallValve } from "./symbols/ball-valve";
 import { PeristalticPump } from "./symbols/peristaltic-pump";
 import { PressureSwitch } from "./symbols/pressure-switch";
 import { TankLevelProbes } from "./symbols/tank-level-probes";
-import { AnalysisChamber } from "./symbols/analysis-chamber";
+import {
+  AnalysisChamber,
+  AnalysisChamberBody,
+  AnalysisChamberFlow,
+} from "./symbols/analysis-chamber";
 import { HoneycombWindow } from "./symbols/honeycomb-window";
 import { InternalChamber } from "./symbols/internal-chamber";
 import { InterchangerArm } from "./symbols/interchanger-arm";
@@ -23,6 +27,29 @@ import { FlowMeter } from "./symbols/flow-meter";
 // is now the internal chamber (~x=742) so the right margin is intentionally wide.
 const VIEWBOX_WIDTH = 932;
 const VIEWBOX_HEIGHT = 600;
+
+/** Analysis chamber geometry — shared by its three layer pieces. */
+const CHAMBER = { x: 594, y: 310, width: 132, height: 88 };
+
+/**
+ * The diagram is drawn as three stacked SVGs with the same viewBox, each in
+ * its own compositor layer:
+ *   1. base     — background, pipes, analysis-chamber body (static)
+ *   2. flow     — the moving particles (the only thing animating normally)
+ *   3. symbols  — every component, glows included, plus the hotspots
+ * With everything in one SVG, Chrome repainted the blurred glows on every
+ * animation frame (up to the screen's refresh rate) and the GPU went to
+ * 70-80 %. Split like this, only the cheap particle layer repaints, and the
+ * stacking order (pipes < particles < components) is the same as before.
+ * Glow filters/gradients are defined once in the base layer and referenced
+ * from the symbols layer (same document, so url(#id) resolves).
+ */
+const LAYER_SVG = {
+  viewBox: `0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`,
+  preserveAspectRatio: "xMidYMid meet",
+} as const;
+const OVERLAY_CLASS = "absolute inset-0 h-full w-full";
+const OWN_LAYER = { willChange: "transform" } as const;
 
 /**
  * Visual state the diagram renders. Field names are the diagram's own
@@ -119,21 +146,38 @@ export function ProcessDiagram({
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#020617] shadow-2xl">
-      <svg
-        viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
-        className="w-full h-auto"
-        preserveAspectRatio="xMidYMid meet"
-      >
+      {/* === 1. BASE LAYER (static) — sizes the container === */}
+      <svg {...LAYER_SVG} className="w-full h-auto">
         <DiagramDefs />
         <DiagramBackground width={VIEWBOX_WIDTH} height={VIEWBOX_HEIGHT} />
 
         {/* Pipes go below all components */}
         <PipeNetwork />
 
-        {/* Animated flow particles travelling along active pipes */}
+        {/* Chamber body sits under the in-chamber particles */}
+        <AnalysisChamberBody
+          {...CHAMBER}
+          interchangerMode={sampleState.interchangerMode}
+        />
+      </svg>
+
+      {/* === 2. FLOW LAYER — animated particles travelling along active pipes === */}
+      <svg
+        {...LAYER_SVG}
+        className={`${OVERLAY_CLASS} pointer-events-none`}
+        style={OWN_LAYER}
+        aria-hidden="true"
+      >
         <FlowLayer state={sampleState} />
+        <AnalysisChamberFlow
+          {...CHAMBER}
+          interchangerMode={sampleState.interchangerMode}
+          pumping={flowing}
+        />
+      </svg>
 
-
+      {/* === 3. SYMBOLS LAYER (static except alarm blinkers) === */}
+      <svg {...LAYER_SVG} className={OVERLAY_CLASS} style={OWN_LAYER}>
         {/* === TANKS (left column) === */}
         <TankCylinder
           x={50}
@@ -231,15 +275,12 @@ export function ProcessDiagram({
         />
 
         {/* === CENTRAL ASSEMBLY — two chambers facing each other === */}
-        {/* Analysis chamber (left): sample flows in (top) and out (bottom). */}
+        {/* Analysis chamber (left): sample flows in (top) and out (bottom).
+            Body is in the base layer and its particles in the flow layer. */}
         <AnalysisChamber
-          x={594}
-          y={310}
-          width={132}
-          height={88}
+          {...CHAMBER}
           tag={t("AC-001")}
           interchangerMode={sampleState.interchangerMode}
-          pumping={flowing}
         />
 
         {/* Honeycomb window between the chambers — radiation crosses here. */}

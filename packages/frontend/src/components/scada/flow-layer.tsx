@@ -66,14 +66,11 @@ function Flow({
     return (
       <>
         {indices.map((i) => (
-          <ellipse
-            key={`${pathId}-gas-${i}`}
-            rx="4"
-            ry="1.1"
-            fill={color}
-            opacity="0.7"
-            filter="url(#particle-glow)"
-          >
+          <g key={`${pathId}-gas-${i}`}>
+            {/* Halo: imita el brillo sin filtro SVG (un filtro sobre un elemento
+                en movimiento obliga a redibujar el diagrama en cada cuadro). */}
+            <ellipse rx="7" ry="2.6" fill={color} opacity="0.2" />
+            <ellipse rx="4" ry="1.1" fill={color} opacity="0.7" />
             <animateMotion
               dur={`${duration}s`}
               repeatCount="indefinite"
@@ -84,22 +81,19 @@ function Flow({
             >
               <mpath href={`#${pathId}`} />
             </animateMotion>
-          </ellipse>
+          </g>
         ))}
       </>
     );
   }
 
-  // Liquid — round droplets with glow halo
+  // Liquid — round droplets with a halo (plain translucent circle, no SVG filter)
   return (
     <>
       {indices.map((i) => (
-        <circle
-          key={`${pathId}-liq-${i}`}
-          r="2.5"
-          fill={color}
-          filter="url(#particle-glow)"
-        >
+        <g key={`${pathId}-liq-${i}`}>
+          <circle r="5" fill={color} opacity="0.22" />
+          <circle r="2.5" fill={color} />
           <animateMotion
             dur={`${duration}s`}
             repeatCount="indefinite"
@@ -109,7 +103,7 @@ function Flow({
           >
             <mpath href={`#${pathId}`} />
           </animateMotion>
-        </circle>
+        </g>
       ))}
     </>
   );

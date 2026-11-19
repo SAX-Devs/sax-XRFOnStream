@@ -87,7 +87,10 @@ export function InternalChamber({
       />
 
       {/* X-ray beam: tube → window point — visible whenever HV is ON,
-          even between acquisitions (the tube really is radiating). */}
+          even between acquisitions (the tube really is radiating).
+          Steady glow, no pulse: in this diagram only states that need the
+          operator's attention blink (an animation on a blurred element
+          forces a full repaint every frame). */}
       {hvOn && (
         <g>
           <line
@@ -98,28 +101,15 @@ export function InternalChamber({
             stroke="#fde047"
             strokeWidth="2"
             strokeLinecap="round"
+            opacity="0.75"
             filter="url(#detector-glow)"
-          >
-            <animate
-              attributeName="opacity"
-              values="0.45;0.9;0.45"
-              dur="1.6s"
-              repeatCount="indefinite"
-            />
-          </line>
-          <circle cx={pointX} cy={pointY} r="3.5" fill="#fde047">
-            <animate
-              attributeName="r"
-              values="2.5;4;2.5"
-              dur="1.6s"
-              repeatCount="indefinite"
-            />
-          </circle>
+          />
+          <circle cx={pointX} cy={pointY} r="3.5" fill="#fde047" />
         </g>
       )}
 
       {/* Fluorescence return: window point → detector — only while the
-          detector is actually acquiring. */}
+          detector is actually acquiring. Steady, same reason as the beam. */}
       {detectionOn && (
         <line
           x1={pointX}
@@ -129,16 +119,9 @@ export function InternalChamber({
           stroke="#22d3ee"
           strokeWidth="2"
           strokeLinecap="round"
+          opacity="0.75"
           filter="url(#detector-glow)"
-        >
-          <animate
-            attributeName="opacity"
-            values="0.45;0.9;0.45"
-            dur="1.6s"
-            begin="0.2s"
-            repeatCount="indefinite"
-          />
-        </line>
+        />
       )}
 
       {/* X-ray tube (upper), nose toward the window */}

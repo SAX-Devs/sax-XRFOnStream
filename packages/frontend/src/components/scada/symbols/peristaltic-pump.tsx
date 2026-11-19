@@ -93,19 +93,10 @@ export function PeristalticPump({
         strokeOpacity="0.5"
       />
 
-      {/* Rotor group — rotates around (0,0) which is the pump center thanks to the parent translate */}
+      {/* Rotor group — static: "running" reads from the colour, the halo and
+          the direction arrow; a spinning rotor under a blurred halo forced a
+          repaint every frame. Only attention states animate in this diagram. */}
       <g className="pump-rotor">
-        {isActive && (
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            from={state === "FORWARD" ? "0" : "360"}
-            to={state === "FORWARD" ? "360" : "0"}
-            dur="2s"
-            repeatCount="indefinite"
-          />
-        )}
-
         {/* Center hub */}
         <circle cx="0" cy="0" r="4" fill={stateColor} />
 

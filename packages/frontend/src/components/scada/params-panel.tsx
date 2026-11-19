@@ -18,7 +18,7 @@ function ParamCard({ label, value, unit, status = "normal" }: ParamCardProps) {
 
   return (
     <div
-      className={`group rounded-lg border border-white/5 ${accentBorder} border-l-2 bg-white/[0.03] px-3 py-2 backdrop-blur-sm transition-colors hover:bg-white/[0.06]`}
+      className={`group rounded-lg border border-white/5 ${accentBorder} border-l-2 bg-white/[0.03] px-3 py-2 transition-colors hover:bg-white/[0.06]`}
     >
       <div className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
         {label}
@@ -83,7 +83,7 @@ const DEFAULT_PARAMS = {
 
 export function ParamsPanel({ params = DEFAULT_PARAMS }: ParamsPanelProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/60 p-3 backdrop-blur-md">
+    <div className="rounded-2xl border border-white/10 bg-black/60 p-3">
       <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-2 px-1">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           Parámetros

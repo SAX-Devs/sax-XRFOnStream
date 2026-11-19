@@ -79,7 +79,8 @@ export function FlowMeter({
         style={colorTrans}
       />
 
-      {/* Flow direction chevrons — top + bottom, alternating opacity to flow */}
+      {/* Flow direction chevrons — top + bottom. Steady (brighter while
+          active): normal operation doesn't blink, only attention states do. */}
       <path
         d={`M ${x - 5} ${y - 6} L ${x} ${y - 1} L ${x + 5} ${y - 6}`}
         fill="none"
@@ -87,18 +88,9 @@ export function FlowMeter({
         strokeWidth="1.5"
         strokeLinejoin="round"
         strokeLinecap="round"
-        opacity="0.45"
+        opacity={active ? "0.85" : "0.45"}
         style={colorTrans}
-      >
-        {active && (
-          <animate
-            attributeName="opacity"
-            values="0.25;0.85;0.25"
-            dur="1s"
-            repeatCount="indefinite"
-          />
-        )}
-      </path>
+      />
       <path
         d={`M ${x - 5} ${y - 1} L ${x} ${y + 4} L ${x + 5} ${y - 1}`}
         fill="none"
@@ -106,18 +98,9 @@ export function FlowMeter({
         strokeWidth="1.5"
         strokeLinejoin="round"
         strokeLinecap="round"
-        opacity="0.45"
+        opacity={active ? "0.85" : "0.45"}
         style={colorTrans}
-      >
-        {active && (
-          <animate
-            attributeName="opacity"
-            values="0.85;0.25;0.85"
-            dur="1s"
-            repeatCount="indefinite"
-          />
-        )}
-      </path>
+      />
 
       {/* Signal line from meter to display */}
       <line

@@ -72,15 +72,6 @@ export function DiagramDefs() {
         </feMerge>
       </filter>
 
-      {/* Glow filter for flow particles */}
-      <filter id="particle-glow" x="-100%" y="-100%" width="300%" height="300%">
-        <feGaussianBlur stdDeviation="1.8" result="blur" />
-        <feMerge>
-          <feMergeNode in="blur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-
       {/* Pipe gradient — gives 3D cylindrical effect */}
       <linearGradient id="pipe-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
         <stop offset="0%" stopColor="#475569" />

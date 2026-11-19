@@ -70,20 +70,7 @@ export function TankCylinder({
         ry="2"
         fill={fluidColor}
         opacity="0.5"
-      >
-        <animate
-          attributeName="ry"
-          values="1.5;3;1.5"
-          dur="3s"
-          repeatCount="indefinite"
-        />
-        <animate
-          attributeName="opacity"
-          values="0.35;0.7;0.35"
-          dur="3s"
-          repeatCount="indefinite"
-        />
-      </ellipse>
+      />
 
       {/* Top ellipse (cylinder cap) */}
       <ellipse
